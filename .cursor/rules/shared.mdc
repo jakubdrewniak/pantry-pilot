@@ -1,0 +1,44 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# AI Rules for Pantry Pilot
+
+Pantry Pilot is a web-based application that streamlines meal planning by combining manual pantry management with AI-powered recipe generation. Users register with email and password, track pantry inventory, create and edit recipes in Markdown, generate recipes based on available ingredients using an LLM, and compile shopping lists. Real-time collaboration allows invited users to jointly manage pantries and shopping lists.
+
+## Tech Stack
+
+- TypeScript 5
+- React 19
+- Tailwind 4
+- Shadcn/ui
+- Next.js
+- Supabase
+
+## Project Structure
+
+When introducing changes to the project, always follow the directory structure below:
+
+- src/pages/ – all React pages and API endpoints
+- src/layouts/ – layout wrappers and shared templates
+- src/components/ui/ – ready-made shadcn/ui components plus our customizations
+- src/db/ – Supabase configuration and table type definitions
+- src/types.ts – DTOs and interfaces shared between front-end and API
+- src/lib/ – all helper logic (AI, Markdown, validation)
+- src/middleware.ts – global Next.js middleware (e.g. route protection)
+- public/ & src/assets/ – separation of public static files and those bundled by the build process
+
+## Coding practices
+
+### Guidelines for clean code
+
+- Use feedback from linters to improve the code when making changes.
+- Prioritize error handling and edge cases.
+- Handle errors and edge cases at the beginning of functions.
+- Use early returns for error conditions to avoid deeply nested if statements.
+- Place the happy path last in the function for improved readability.
+- Avoid unnecessary else statements; use if-return pattern instead.
+- Use guard clauses to handle preconditions and invalid states early.
+- Implement proper error logging and user-friendly error messages.
+- Consider using custom error types or error factories for consistent error handling.
