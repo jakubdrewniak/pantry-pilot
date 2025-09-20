@@ -1,6 +1,7 @@
 # Pantry Pilot Bootstrap Plan
 
 ## Overview
+
 Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal planning by combining manual pantry management with AI-powered recipe generation.
 
 **Tech Stack:** Next.js 15, React 19, TypeScript 5, Tailwind CSS 4, shadcn/ui, ESLint v9.36.0, Supabase
@@ -8,6 +9,7 @@ Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal 
 ## Step-by-Step Bootstrap Plan
 
 ### Phase 1: Project Initialization
+
 1. **Create Next.js project with modern template**
    - Use `npx create-next-app@latest pantry-pilot --typescript --tailwind --eslint --app --src-dir --import-alias "@/*"`
    - This creates a Next.js 15 project with App Router, TypeScript, Tailwind CSS 4, and ESLint pre-configured
@@ -23,6 +25,7 @@ Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal 
    - Verification: Check git status shows clean working tree
 
 ### Phase 2: Core Dependencies & Configuration
+
 4. **Install additional dependencies**
    - `npm install --save-dev @types/node @types/react @types/react-dom`
    - `npm install next-themes class-variance-authority clsx tailwind-merge lucide-react`
@@ -40,6 +43,7 @@ Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal 
    - Verification: Check `src/components/ui/` contains shadcn components
 
 ### Phase 3: Code Quality Tools
+
 7. **Configure Prettier**
    - Create `.prettierrc` with: `{"semi": false, "singleQuote": true, "tabWidth": 2}`
    - Create `.prettierignore` with: `node_modules`, `.next`, `dist`
@@ -53,6 +57,7 @@ Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal 
    - Verification: Run `npm run lint` - should show no errors on clean code
 
 ### Phase 4: Git Quality Gates
+
 9. **Setup Husky for Git hooks**
    - `npm install --save-dev husky`
    - `npx husky init`
@@ -72,7 +77,9 @@ Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal 
     - Verification: Stage a file, try commit - should run prettier/eslint automatically
 
 ### Phase 5: Project Structure & Welcome Page
+
 12. **Create folder structure**
+
     ```
     src/
     ├── app/           # Next.js app router
@@ -91,6 +98,7 @@ Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal 
     - Verification: Run `npm run dev` and check the welcome page renders correctly
 
 ### Phase 6: Verification & Testing
+
 14. **Run complete verification**
     - `npm run build` - should build successfully
     - `npm run lint` - should pass all linting rules
@@ -108,7 +116,9 @@ Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal 
 ## ✅ COMPLETED STEPS SUMMARY
 
 ### Step 1: Project Initialization ✅ COMPLETED
+
 **What Was Accomplished:**
+
 - ✅ **Next.js 15.0.0** with App Router initialized
 - ✅ **React 19.0.0-rc** (compatible version) configured
 - ✅ **TypeScript 5** with strict configuration
@@ -116,6 +126,7 @@ Bootstrap plan for Pantry Pilot - a web-based application that streamlines meal 
 - ✅ **ESLint v9.36.0** with modern flat config and Next.js core web vitals rules
 
 **Project Structure Created:**
+
 ```
 src/
 ├── app/           # Next.js App Router
@@ -130,6 +141,7 @@ src/
 ```
 
 **Configuration Files:**
+
 - ✅ `package.json` - Dependencies and scripts configured
 - ✅ `tsconfig.json` - TypeScript with path mapping (`@/*`)
 - ✅ `tailwind.config.ts` - Tailwind with shadcn/ui variables
@@ -140,12 +152,14 @@ src/
 - ✅ `.gitignore` - Comprehensive Next.js gitignore rules
 
 **Welcome Page:**
+
 - ✅ Beautiful gradient background with Tailwind CSS
 - ✅ Responsive design with proper typography
 - ✅ Dark mode CSS variables ready
 - ✅ Clean, professional Pantry Pilot branding
 
 **Verification Results:**
+
 - ✅ **Development Server**: `npm run dev` ✅ (HTTP 200 response)
 - ✅ **ESLint v9.36.0**: `npm run lint` ✅ (Modern flat config working)
 - ✅ **TypeScript**: `npx tsc --noEmit` ✅ (No type errors)
@@ -153,6 +167,7 @@ src/
 - ✅ **Dependencies**: `npm install` ✅ (All packages installed)
 
 **Key Features Working:**
+
 - Hot reload development server
 - TypeScript compilation and checking
 - Tailwind CSS processing and optimization
@@ -160,6 +175,7 @@ src/
 - Next.js App Router with proper file structure
 
 **Next Steps:**
+
 - **Step 2**: Installing additional dependencies (class-variance-authority, etc.)
 - **Step 3**: shadcn/ui CLI setup and component installation
 - **Step 4**: Git hooks and quality gates
@@ -167,13 +183,14 @@ src/
 
 ---
 
-*Last Updated: $(date)*
----
+## _Last Updated: $(date)_
 
 ## ✅ COMPLETED STEPS SUMMARY (UPDATED)
 
 ### Step 2: Core Dependencies & Configuration ✅ COMPLETED
+
 **What Was Accomplished:**
+
 - ✅ **TypeScript type definitions** installed (@types/node, @types/react, @types/react-dom)
 - ✅ **next-themes v0.4.6** installed for dark mode support
 - ✅ **class-variance-authority v0.7.1** installed for component variant management
@@ -186,6 +203,7 @@ src/
 - ✅ **Layout updated** with ThemeProvider for dark mode support
 
 **Key Features Implemented:**
+
 - Dark mode support with system preference detection
 - Reusable button component with multiple variants (default, outline, etc.)
 - Icon integration with lucide-react
@@ -194,6 +212,7 @@ src/
 - All dependencies working correctly with React 19
 
 **Verification Results:**
+
 - ✅ **ESLint**: `npm run lint` ✅ (No errors with new components)
 - ✅ **TypeScript**: `npx tsc --noEmit` ✅ (All type checks pass)
 - ✅ **Production Build**: `npm run build` ✅ (Successful compilation)
@@ -201,6 +220,7 @@ src/
 - ✅ **Dependencies**: All packages installed and working
 
 **Components Created:**
+
 - `src/lib/utils.ts` - Utility functions for Tailwind class merging
 - `src/components/theme-provider.tsx` - Theme provider with next-themes
 - `src/components/ui/button.tsx` - Reusable button component with variants
@@ -208,6 +228,7 @@ src/
 - Updated `src/app/page.tsx` - Demo page showing new features
 
 **Next Steps:**
+
 - **Step 3**: shadcn/ui CLI setup and component installation
 - **Step 4**: Git hooks and quality gates
 - **Step 5**: Advanced linting and formatting tools
@@ -219,7 +240,9 @@ src/
 ## ✅ COMPLETED STEPS SUMMARY (UPDATED)
 
 ### Step 3: shadcn/ui CLI Setup and Component Installation ✅ COMPLETED
+
 **What Was Accomplished:**
+
 - ✅ **shadcn/ui CLI initialized** with `npx shadcn@latest init`
 - ✅ **Configuration created** (`components.json` with New York style, neutral theme)
 - ✅ **Tailwind CSS updated** with shadcn/ui theme variables and animations
@@ -233,6 +256,7 @@ src/
 - ✅ **Demo form created** demonstrating Input, Label, Button, Card components
 
 **shadcn/ui Configuration:**
+
 ```json
 {
   "style": "new-york",
@@ -254,6 +278,7 @@ src/
 ```
 
 **Components Created:**
+
 - ✅ `src/components/ui/card.tsx` - Complete card system with Header, Content, Footer
 - ✅ `src/components/ui/badge.tsx` - Badge component with variants
 - ✅ `src/components/ui/input.tsx` - Form input with proper styling
@@ -261,6 +286,7 @@ src/
 - ✅ Updated `src/components/ui/button.tsx` - Enhanced with better variants
 
 **Key Features Implemented:**
+
 - **Modern Design System**: New York style with neutral color scheme
 - **Dark Mode Support**: CSS variables for both light and dark themes
 - **Component Variants**: Multiple styles for each component using class-variance-authority
@@ -270,6 +296,7 @@ src/
 - **Icon Integration**: Lucide React icons throughout the interface
 
 **Verification Results:**
+
 - ✅ **ESLint**: `npm run lint` ✅ (All components pass linting)
 - ✅ **TypeScript**: `npx tsc --noEmit` ✅ (All type checks pass)
 - ✅ **Production Build**: `npm run build` ✅ (Successful compilation)
@@ -278,6 +305,7 @@ src/
 - ✅ **Form Integration**: Input, Label, and Button components working together
 
 **Components Directory Structure:**
+
 ```
 src/components/
 ├── ui/
@@ -291,9 +319,132 @@ src/components/
 ```
 
 **Next Steps:**
+
 - **Step 4**: Git hooks and quality gates
 - **Step 5**: Advanced linting and formatting tools
 
 ---
 
-*Status: Ready for Step 4*
+---
+
+## ✅ COMPLETED STEPS SUMMARY (UPDATED)
+
+### Step 4: Git Hooks and Quality Gates ✅ COMPLETED
+
+**What Was Accomplished:**
+
+- ✅ **Husky v9.1.7** installed and initialized for Git hooks management
+- ✅ **Git hooks directory** created (`.husky/`) with proper structure
+- ✅ **Package.json prepare script** configured: `"prepare": "husky"`
+- ✅ **commitlint** installed with conventional configuration
+- ✅ **commitlint.config.js** created with conventional commit rules
+- ✅ **commit-msg hook** created to enforce commit message conventions
+- ✅ **lint-staged v16.1.6** installed for pre-commit quality checks
+- ✅ **Pre-commit hook** created to run lint-staged on staged files
+- ✅ **Prettier** installed and configured for code formatting
+- ✅ **.prettierrc** created with consistent formatting rules
+- ✅ **.prettierignore** created to exclude build files and dependencies
+- ✅ **Git workflow tested** with both valid and invalid commit messages
+- ✅ **Quality gates verified** - all hooks working correctly
+
+**Git Hooks Configuration:**
+
+```bash
+.husky/
+├── pre-commit    # Runs lint-staged on staged files
+├── commit-msg    # Validates commit messages with commitlint
+└── _/           # Husky internal files
+```
+
+**commitlint.config.js:**
+
+```javascript
+export default {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      [
+        'build',
+        'chore',
+        'ci',
+        'docs',
+        'feat',
+        'fix',
+        'perf',
+        'refactor',
+        'revert',
+        'style',
+        'test',
+      ],
+    ],
+    'subject-case': [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']],
+    'subject-empty': [2, 'never'],
+    'subject-full-stop': [2, 'never', '.'],
+    'header-max-length': [2, 'always', 72],
+  },
+}
+```
+
+**lint-staged Configuration:**
+
+```json
+{
+  "*.{js,ts,tsx,json,md}": ["eslint --fix", "prettier --write --ignore-unknown"]
+}
+```
+
+**Prettier Configuration (.prettierrc):**
+
+```json
+{
+  "semi": false,
+  "singleQuote": true,
+  "tabWidth": 2,
+  "trailingComma": "es5",
+  "printWidth": 100,
+  "useTabs": false,
+  "bracketSpacing": true,
+  "bracketSameLine": false,
+  "arrowParens": "avoid"
+}
+```
+
+**Key Features Implemented:**
+
+- **Pre-commit quality checks** - ESLint and Prettier run automatically
+- **Conventional commit enforcement** - Standardized commit message format
+- **Code formatting consistency** - Prettier ensures uniform code style
+- **Git workflow integration** - Quality gates built into development process
+- **CI/CD ready** - Same quality checks can run in CI pipelines
+
+**Verification Results:**
+
+- ✅ **Pre-commit hook**: `lint-staged` runs ESLint and Prettier on staged files
+- ✅ **Commit-msg hook**: `commitlint` validates conventional commit format
+- ✅ **Invalid commits rejected**: Bad commit messages properly blocked
+- ✅ **Valid commits accepted**: Proper conventional commits succeed
+- ✅ **Build compatibility**: All hooks work with existing build process
+- ✅ **Performance**: Hooks run efficiently without slowing development
+
+**Git Workflow Demonstration:**
+
+```bash
+# Bad commit message (rejected)
+git commit -m "bad commit message"
+# ❌ Fails with commitlint errors
+
+# Good commit message (accepted)
+git commit -m "docs: update README with project description"
+# ✅ Passes all quality checks and commits successfully
+```
+
+**Next Steps:**
+
+- **Step 5**: Advanced linting and formatting tools
+- Ready for production development with enforced code quality
+
+---
+
+_Status: Ready for Step 5_

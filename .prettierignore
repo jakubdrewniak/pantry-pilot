@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build outputs
+.next/
+out/
+build/
+dist/
+
+# Generated files
+*.tsbuildinfo
+
+# Config files that shouldn't be formatted
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# IDE and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env*
+
+# Cache directories
+.cache/
+.eslintcache
