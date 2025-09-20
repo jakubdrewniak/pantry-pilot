@@ -1,9 +1,9 @@
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { ChefHat, Sparkles, Heart, CheckCircle } from "lucide-react"
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ChefHat, Sparkles, Heart, CheckCircle } from 'lucide-react'
 
 export default function Home() {
   return (
@@ -28,9 +28,7 @@ export default function Home() {
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   Step 2 Complete! 🎉
                 </CardTitle>
-                <CardDescription>
-                  Core dependencies and utilities configured
-                </CardDescription>
+                <CardDescription>Core dependencies and utilities configured</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -62,9 +60,7 @@ export default function Home() {
                   <Sparkles className="h-5 w-5 text-blue-600" />
                   Step 3 Complete! ✨
                 </CardTitle>
-                <CardDescription>
-                  shadcn/ui components and configuration
-                </CardDescription>
+                <CardDescription>shadcn/ui components and configuration</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -94,9 +90,7 @@ export default function Home() {
           <Card className="max-w-md mx-auto mb-8">
             <CardHeader>
               <CardTitle>Demo Form</CardTitle>
-              <CardDescription>
-                Test the new shadcn/ui components
-              </CardDescription>
+              <CardDescription>Test the new shadcn/ui components</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -128,5 +122,5 @@ export default function Home() {
         </div>
       </div>
     </div>
-  );
+  )
 }

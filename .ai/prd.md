@@ -19,7 +19,7 @@ Many individuals waste time and food because they are unsure what to cook with i
    - Users can manually add pantry items by name.
    - Users can add items to pantry from shopping list (one by one or in bulk)
    - Users can remove pantry items manually.
-   - Users can remove pantry items from recipe  
+   - Users can remove pantry items from recipe
 
 3. Recipe Management
    - Users can create, view, edit, and delete recipes manually.
