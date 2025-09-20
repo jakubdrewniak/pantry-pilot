@@ -1,5 +1,9 @@
 import { Button } from "@/components/ui/button"
-import { ChefHat, Sparkles, Heart } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { ChefHat, Sparkles, Heart, CheckCircle } from "lucide-react"
 
 export default function Home() {
   return (
@@ -17,35 +21,95 @@ export default function Home() {
             Streamline meal planning with AI-powered recipe generation
           </p>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 max-w-2xl mx-auto mb-8">
-            <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-4">
-              Step 2 Complete! 🎉
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              Additional dependencies installed and configured
-            </p>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  Step 2 Complete! 🎉
+                </CardTitle>
+                <CardDescription>
+                  Core dependencies and utilities configured
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold mb-2">✅ Installed Packages:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="secondary">next-themes</Badge>
+                      <Badge variant="secondary">class-variance-authority</Badge>
+                      <Badge variant="secondary">clsx</Badge>
+                      <Badge variant="secondary">tailwind-merge</Badge>
+                      <Badge variant="secondary">lucide-react</Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">✅ TypeScript Types:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="outline">@types/node</Badge>
+                      <Badge variant="outline">@types/react</Badge>
+                      <Badge variant="outline">@types/react-dom</Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-              <div className="space-y-2">
-                <h3 className="font-semibold text-gray-800 dark:text-white">✅ Installed Packages:</h3>
-                <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                  <li>• next-themes (dark mode support)</li>
-                  <li>• class-variance-authority (component variants)</li>
-                  <li>• clsx & tailwind-merge (utility functions)</li>
-                  <li>• lucide-react (icons)</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-semibold text-gray-800 dark:text-white">✅ TypeScript Types:</h3>
-                <ul className="text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                  <li>• @types/node</li>
-                  <li>• @types/react</li>
-                  <li>• @types/react-dom</li>
-                </ul>
-              </div>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-blue-600" />
+                  Step 3 Complete! ✨
+                </CardTitle>
+                <CardDescription>
+                  shadcn/ui components and configuration
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold mb-2">✅ shadcn/ui Setup:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="default">components.json</Badge>
+                      <Badge variant="default">New York style</Badge>
+                      <Badge variant="default">Neutral theme</Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold mb-2">✅ Components Created:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge>Button</Badge>
+                      <Badge>Card</Badge>
+                      <Badge>Badge</Badge>
+                      <Badge>Input</Badge>
+                      <Badge>Label</Badge>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+
+          <Card className="max-w-md mx-auto mb-8">
+            <CardHeader>
+              <CardTitle>Demo Form</CardTitle>
+              <CardDescription>
+                Test the new shadcn/ui components
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" placeholder="Enter your email" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input id="name" placeholder="Enter your name" />
+              </div>
+              <Button className="w-full">Submit</Button>
+            </CardContent>
+          </Card>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Button variant="default" size="lg" className="flex items-center gap-2">
