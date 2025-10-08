@@ -37,55 +37,55 @@ create index idx_recipes_household_id on recipes(household_id);
 
 -- enable row level security
 -- rls ensures only household members can access their recipes
-alter table recipes enable row level security;
+-- alter table recipes enable row level security;
 
--- rls policy: authenticated users can select recipes for households they belong to
-create policy recipes_select_policy on recipes
-  for select
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
-    )
-  );
+-- -- rls policy: authenticated users can select recipes for households they belong to
+-- create policy recipes_select_policy on recipes
+--   for select
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can insert recipes for households they belong to
-create policy recipes_insert_policy on recipes
-  for insert
-  to authenticated
-  with check (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
-    )
-  );
+-- -- rls policy: authenticated users can insert recipes for households they belong to
+-- create policy recipes_insert_policy on recipes
+--   for insert
+--   to authenticated
+--   with check (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can update recipes for households they belong to
-create policy recipes_update_policy on recipes
-  for update
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
-    )
-  )
-  with check (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
-    )
-  );
+-- -- rls policy: authenticated users can update recipes for households they belong to
+-- create policy recipes_update_policy on recipes
+--   for update
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
+--     )
+--   )
+--   with check (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can delete recipes for households they belong to
-create policy recipes_delete_policy on recipes
-  for delete
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
-    )
-  );
+-- -- rls policy: authenticated users can delete recipes for households they belong to
+-- create policy recipes_delete_policy on recipes
+--   for delete
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = recipes.household_id
+--     )
+--   );
 

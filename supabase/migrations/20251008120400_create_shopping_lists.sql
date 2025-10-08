@@ -34,111 +34,111 @@ create unique index idx_shopping_list_items_unique_name on shopping_list_items(s
 
 -- enable row level security
 -- rls ensures only household members can access their shopping list
-alter table shopping_lists enable row level security;
-alter table shopping_list_items enable row level security;
+-- alter table shopping_lists enable row level security;
+-- alter table shopping_list_items enable row level security;
 
--- rls policy: authenticated users can select shopping lists for households they belong to
-create policy shopping_lists_select_policy on shopping_lists
-  for select
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
-    )
-  );
+-- -- rls policy: authenticated users can select shopping lists for households they belong to
+-- create policy shopping_lists_select_policy on shopping_lists
+--   for select
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can insert shopping lists for households they belong to
-create policy shopping_lists_insert_policy on shopping_lists
-  for insert
-  to authenticated
-  with check (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
-    )
-  );
+-- -- rls policy: authenticated users can insert shopping lists for households they belong to
+-- create policy shopping_lists_insert_policy on shopping_lists
+--   for insert
+--   to authenticated
+--   with check (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can update shopping lists for households they belong to
-create policy shopping_lists_update_policy on shopping_lists
-  for update
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
-    )
-  )
-  with check (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
-    )
-  );
+-- -- rls policy: authenticated users can update shopping lists for households they belong to
+-- create policy shopping_lists_update_policy on shopping_lists
+--   for update
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
+--     )
+--   )
+--   with check (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can delete shopping lists for households they belong to
-create policy shopping_lists_delete_policy on shopping_lists
-  for delete
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
-    )
-  );
+-- -- rls policy: authenticated users can delete shopping lists for households they belong to
+-- create policy shopping_lists_delete_policy on shopping_lists
+--   for delete
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = shopping_lists.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can select shopping list items for their household
-create policy shopping_list_items_select_policy on shopping_list_items
-  for select
-  to authenticated
-  using (
-    exists (
-      select 1 from shopping_lists sl
-      inner join user_households uh on uh.household_id = sl.household_id
-      where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
-    )
-  );
+-- -- rls policy: authenticated users can select shopping list items for their household
+-- create policy shopping_list_items_select_policy on shopping_list_items
+--   for select
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from shopping_lists sl
+--       inner join user_households uh on uh.household_id = sl.household_id
+--       where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
+--     )
+--   );
 
--- rls policy: authenticated users can insert shopping list items for their household
-create policy shopping_list_items_insert_policy on shopping_list_items
-  for insert
-  to authenticated
-  with check (
-    exists (
-      select 1 from shopping_lists sl
-      inner join user_households uh on uh.household_id = sl.household_id
-      where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
-    )
-  );
+-- -- rls policy: authenticated users can insert shopping list items for their household
+-- create policy shopping_list_items_insert_policy on shopping_list_items
+--   for insert
+--   to authenticated
+--   with check (
+--     exists (
+--       select 1 from shopping_lists sl
+--       inner join user_households uh on uh.household_id = sl.household_id
+--       where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
+--     )
+--   );
 
--- rls policy: authenticated users can update shopping list items for their household
-create policy shopping_list_items_update_policy on shopping_list_items
-  for update
-  to authenticated
-  using (
-    exists (
-      select 1 from shopping_lists sl
-      inner join user_households uh on uh.household_id = sl.household_id
-      where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
-    )
-  )
-  with check (
-    exists (
-      select 1 from shopping_lists sl
-      inner join user_households uh on uh.household_id = sl.household_id
-      where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
-    )
-  );
+-- -- rls policy: authenticated users can update shopping list items for their household
+-- create policy shopping_list_items_update_policy on shopping_list_items
+--   for update
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from shopping_lists sl
+--       inner join user_households uh on uh.household_id = sl.household_id
+--       where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
+--     )
+--   )
+--   with check (
+--     exists (
+--       select 1 from shopping_lists sl
+--       inner join user_households uh on uh.household_id = sl.household_id
+--       where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
+--     )
+--   );
 
--- rls policy: authenticated users can delete shopping list items for their household
-create policy shopping_list_items_delete_policy on shopping_list_items
-  for delete
-  to authenticated
-  using (
-    exists (
-      select 1 from shopping_lists sl
-      inner join user_households uh on uh.household_id = sl.household_id
-      where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
-    )
-  );
+-- -- rls policy: authenticated users can delete shopping list items for their household
+-- create policy shopping_list_items_delete_policy on shopping_list_items
+--   for delete
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from shopping_lists sl
+--       inner join user_households uh on uh.household_id = sl.household_id
+--       where uh.user_id = auth.uid() and sl.id = shopping_list_items.shopping_list_id
+--     )
+--   );
 

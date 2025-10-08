@@ -32,111 +32,111 @@ create unique index idx_pantry_items_unique_name on pantry_items(pantry_id, lowe
 
 -- enable row level security
 -- rls ensures only household members can access their pantry
-alter table pantries enable row level security;
-alter table pantry_items enable row level security;
+-- alter table pantries enable row level security;
+-- alter table pantry_items enable row level security;
 
--- rls policy: authenticated users can select pantries for households they belong to
-create policy pantries_select_policy on pantries
-  for select
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
-    )
-  );
+-- -- rls policy: authenticated users can select pantries for households they belong to
+-- create policy pantries_select_policy on pantries
+--   for select
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can insert pantries for households they belong to
-create policy pantries_insert_policy on pantries
-  for insert
-  to authenticated
-  with check (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
-    )
-  );
+-- -- rls policy: authenticated users can insert pantries for households they belong to
+-- create policy pantries_insert_policy on pantries
+--   for insert
+--   to authenticated
+--   with check (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can update pantries for households they belong to
-create policy pantries_update_policy on pantries
-  for update
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
-    )
-  )
-  with check (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
-    )
-  );
+-- -- rls policy: authenticated users can update pantries for households they belong to
+-- create policy pantries_update_policy on pantries
+--   for update
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
+--     )
+--   )
+--   with check (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can delete pantries for households they belong to
-create policy pantries_delete_policy on pantries
-  for delete
-  to authenticated
-  using (
-    exists (
-      select 1 from user_households uh
-      where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
-    )
-  );
+-- -- rls policy: authenticated users can delete pantries for households they belong to
+-- create policy pantries_delete_policy on pantries
+--   for delete
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from user_households uh
+--       where uh.user_id = auth.uid() and uh.household_id = pantries.household_id
+--     )
+--   );
 
--- rls policy: authenticated users can select pantry items for their household
-create policy pantry_items_select_policy on pantry_items
-  for select
-  to authenticated
-  using (
-    exists (
-      select 1 from pantries p
-      inner join user_households uh on uh.household_id = p.household_id
-      where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
-    )
-  );
+-- -- rls policy: authenticated users can select pantry items for their household
+-- create policy pantry_items_select_policy on pantry_items
+--   for select
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from pantries p
+--       inner join user_households uh on uh.household_id = p.household_id
+--       where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
+--     )
+--   );
 
--- rls policy: authenticated users can insert pantry items for their household
-create policy pantry_items_insert_policy on pantry_items
-  for insert
-  to authenticated
-  with check (
-    exists (
-      select 1 from pantries p
-      inner join user_households uh on uh.household_id = p.household_id
-      where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
-    )
-  );
+-- -- rls policy: authenticated users can insert pantry items for their household
+-- create policy pantry_items_insert_policy on pantry_items
+--   for insert
+--   to authenticated
+--   with check (
+--     exists (
+--       select 1 from pantries p
+--       inner join user_households uh on uh.household_id = p.household_id
+--       where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
+--     )
+--   );
 
--- rls policy: authenticated users can update pantry items for their household
-create policy pantry_items_update_policy on pantry_items
-  for update
-  to authenticated
-  using (
-    exists (
-      select 1 from pantries p
-      inner join user_households uh on uh.household_id = p.household_id
-      where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
-    )
-  )
-  with check (
-    exists (
-      select 1 from pantries p
-      inner join user_households uh on uh.household_id = p.household_id
-      where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
-    )
-  );
+-- -- rls policy: authenticated users can update pantry items for their household
+-- create policy pantry_items_update_policy on pantry_items
+--   for update
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from pantries p
+--       inner join user_households uh on uh.household_id = p.household_id
+--       where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
+--     )
+--   )
+--   with check (
+--     exists (
+--       select 1 from pantries p
+--       inner join user_households uh on uh.household_id = p.household_id
+--       where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
+--     )
+--   );
 
--- rls policy: authenticated users can delete pantry items for their household
-create policy pantry_items_delete_policy on pantry_items
-  for delete
-  to authenticated
-  using (
-    exists (
-      select 1 from pantries p
-      inner join user_households uh on uh.household_id = p.household_id
-      where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
-    )
-  );
+-- -- rls policy: authenticated users can delete pantry items for their household
+-- create policy pantry_items_delete_policy on pantry_items
+--   for delete
+--   to authenticated
+--   using (
+--     exists (
+--       select 1 from pantries p
+--       inner join user_households uh on uh.household_id = p.household_id
+--       where uh.user_id = auth.uid() and p.id = pantry_items.pantry_id
+--     )
+--   );
 
