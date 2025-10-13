@@ -155,6 +155,7 @@ export type Database = {
         Row: {
           content: Json
           created_at: string
+          creation_method: Database['public']['Enums']['recipe_creation_method']
           household_id: string
           id: string
           updated_at: string
@@ -162,6 +163,7 @@ export type Database = {
         Insert: {
           content: Json
           created_at?: string
+          creation_method?: Database['public']['Enums']['recipe_creation_method']
           household_id: string
           id?: string
           updated_at?: string
@@ -169,6 +171,7 @@ export type Database = {
         Update: {
           content?: Json
           created_at?: string
+          creation_method?: Database['public']['Enums']['recipe_creation_method']
           household_id?: string
           id?: string
           updated_at?: string
@@ -281,7 +284,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      recipe_creation_method: 'manual' | 'ai_generated' | 'ai_generated_modified'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -409,6 +412,8 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      recipe_creation_method: ['manual', 'ai_generated', 'ai_generated_modified'],
+    },
   },
 } as const
