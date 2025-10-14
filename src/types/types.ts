@@ -1,249 +1,303 @@
-// Data Transfer Objects (DTOs) and Command Models for Pantry Pilot API
-// Derived from database entities in database.types.ts
-
-import { Tables, TablesInsert, TablesUpdate, Database } from '@/db/database.types'
+import type { Enums } from '@/db/database.types'
 
 // ============================================================================
-// AUTHENTICATION TYPES
+// BASE TYPES AND ENUMS
 // ============================================================================
 
-/** User DTO for authentication responses */
-export type UserDto = {
+export type RecipeCreationMethod = Enums<'recipe_creation_method'>
+
+// User type (from Supabase Auth)
+export interface User {
   id: string
   email: string
-  created_at: string
+  createdAt?: string
 }
 
-/** Auth response containing user and token */
-export type AuthResponse = {
-  user: UserDto
+// Common types
+export interface Ingredient {
+  name: string
+  quantity: number
+  unit?: string
+}
+
+export interface Pagination {
+  page: number
+  pageSize: number
+  total: number
+}
+
+// ============================================================================
+// DTO TYPES (Data Transfer Objects)
+// ============================================================================
+
+// Household DTOs
+export interface Household {
+  id: string
+  name: string
+  createdAt: string
+  memberCount?: number
+}
+
+export type HouseholdWithMembers = Household & {
+  members: User[]
+}
+
+// Membership DTOs
+export interface Membership {
+  householdId: string
+  userId: string
+  createdAt: string
+  role: 'owner' | 'member'
+  joinedAt: string
+}
+
+// Invitation DTOs
+export interface Invitation {
+  id: string
+  householdId: string
+  invitedEmail: string
   token: string
+  expiresAt: string
+  createdAt: string
 }
 
-/** Register command */
-export type RegisterCommand = {
+// Pantry DTOs
+export interface Pantry {
+  id: string
+  householdId: string
+  createdAt: string
+}
+
+export type PantryWithItems = Pantry & {
+  items: PantryItem[]
+}
+
+export interface PantryItem {
+  id: string
+  name: string
+  pantryId: string
+  quantity: number
+  unit: string | null
+}
+
+// Recipe DTOs
+// Note: Recipes store content as Json in DB, but we transform it to structured data for API
+export interface Recipe {
+  id: string
+  title: string
+  ingredients: Ingredient[]
+  instructions: string
+  mealType?: string
+  creationMethod: RecipeCreationMethod
+  prepTime?: number
+  cookTime?: number
+  createdAt: string
+  updatedAt?: string
+  householdId: string
+}
+
+// Shopping List DTOs
+export interface ShoppingList {
+  id: string
+  householdId: string
+  createdAt: string
+}
+
+export type ShoppingListWithItems = ShoppingList & {
+  items: ShoppingListItem[]
+}
+
+export interface ShoppingListItem {
+  id: string
+  name: string
+  quantity: number
+  shoppingListId: string
+  unit: string | null
+  isPurchased: boolean
+}
+
+// ============================================================================
+// COMMAND MODELS (Request DTOs)
+// ============================================================================
+
+// Authentication Commands
+export interface RegisterRequest {
   email: string
   password: string
 }
 
-/** Login command */
-export type LoginCommand = {
+export interface LoginRequest {
   email: string
   password: string
 }
 
-/** Change password command */
-export type ChangePasswordCommand = {
+export interface ChangePasswordRequest {
   currentPassword: string
   newPassword: string
 }
 
-// ============================================================================
-// HOUSEHOLD TYPES
-// ============================================================================
+// Household Commands
+export interface CreateHouseholdRequest {
+  name: string
+}
 
-/** Household DTO */
-export type HouseholdDto = Pick<
-  Tables<'households'>,
-  'id' | 'name' | 'owner_id' | 'created_at' | 'updated_at'
->
-
-/** Create household command */
-export type CreateHouseholdCommand = Pick<TablesInsert<'households'>, 'name'>
-
-/** Invite to household command */
-export type InviteToHouseholdCommand = {
+export interface InviteMemberRequest {
   invitedEmail: string
 }
 
-// ============================================================================
-// MEMBERSHIP TYPES
-// ============================================================================
-
-/** User membership DTO for household members list */
-export type HouseholdMemberDto = {
-  user_id: string
-  household_id: string
-  created_at: string
-  email?: string // From auth.users, not in user_households table
-}
-
-// ============================================================================
-// INVITATION TYPES
-// ============================================================================
-
-/** Invitation DTO */
-export type InvitationDto = Tables<'household_invitations'>
-
-/** Create invitation command */
-export type CreateInvitationCommand = {
+// Invitation Commands
+export interface CreateInvitationRequest {
   invitedEmail: string
 }
 
-/** Accept invitation command */
-export type AcceptInvitationCommand = {
+export interface AcceptInvitationRequest {
   token: string
 }
 
-// ============================================================================
-// PANTRY TYPES
-// ============================================================================
+// Pantry Commands
+export interface AddPantryItemsRequest {
+  items: Array<{
+    name: string
+    quantity?: number
+    unit?: string | null
+  }>
+}
 
-/** Pantry DTO */
-export type PantryDto = Tables<'pantries'>
+export interface UpdatePantryItemRequest {
+  quantity?: number
+  unit?: string | null
+}
 
-/** Pantry item DTO */
-export type PantryItemDto = Tables<'pantry_items'>
-
-/** Add pantry item command */
-export type AddPantryItemCommand = Pick<TablesInsert<'pantry_items'>, 'name' | 'quantity' | 'unit'>
-
-/** Update pantry item command */
-export type UpdatePantryItemCommand = Pick<TablesUpdate<'pantry_items'>, 'quantity' | 'unit'>
-
-// ============================================================================
-// RECIPE TYPES
-// ============================================================================
-
-/** Recipe creation method enum from database */
-export type RecipeCreationMethod = Database['public']['Enums']['recipe_creation_method']
-
-/** Recipe content structure stored as JSON in database */
-export type RecipeContent = {
+// Recipe Commands
+export interface CreateRecipeRequest {
   title: string
-  ingredients: string[]
+  ingredients: Ingredient[]
   instructions: string
   prepTime?: number
   cookTime?: number
-  mealType?: 'breakfast' | 'lunch' | 'dinner'
+  mealType?: string
 }
 
-/** Recipe DTO with parsed content */
-export type RecipeDto = Omit<Tables<'recipes'>, 'content'> & {
-  content: RecipeContent
-}
+export type UpdateRecipeRequest = CreateRecipeRequest
 
-/** Create recipe command */
-export type CreateRecipeCommand = {
-  title: string
-  ingredients: string[]
-  instructions: string
-  prepTime?: number
-  cookTime?: number
-  mealType?: 'breakfast' | 'lunch' | 'dinner'
-}
-
-/** Update recipe command (same structure as create) */
-export type UpdateRecipeCommand = CreateRecipeCommand
-
-/** Generate recipe command */
-export type GenerateRecipeCommand = {
+export interface GenerateRecipeRequest {
   hint?: string
   usePantryItems: boolean
 }
 
-/** Recipe generation response */
-export type GenerateRecipeResponse = {
-  recipe: RecipeDto
-  warnings?: string[]
-}
-
-// ============================================================================
-// SHOPPING LIST TYPES
-// ============================================================================
-
-/** Shopping list DTO */
-export type ShoppingListDto = Tables<'shopping_lists'>
-
-/** Shopping list item DTO */
-export type ShoppingListItemDto = Tables<'shopping_list_items'>
-
-/** Generate shopping list command */
-export type GenerateShoppingListCommand = {
+// Shopping List Commands
+export interface GenerateShoppingListRequest {
   recipeIds: string[]
 }
 
-/** Add shopping list item command */
-export type AddShoppingListItemCommand = Pick<
-  TablesInsert<'shopping_list_items'>,
-  'name' | 'quantity' | 'unit'
->
+export interface AddShoppingListItemsRequest {
+  items: Array<{
+    name: string
+    quantity?: number
+    unit?: string | null
+    isPurchased?: boolean
+  }>
+}
 
-/** Mark item purchased command */
-export type MarkItemPurchasedCommand = {
-  isPurchased: true
+export interface MarkPurchasedRequest {
+  isPurchased: boolean
 }
 
 // ============================================================================
-// PAGINATION TYPES
+// RESPONSE TYPES
 // ============================================================================
 
-/** Paginated response wrapper */
-export type PaginatedResponse<T> = {
-  data: T[]
-  totalCount: number
-  page: number
-  pageSize: number
-  totalPages: number
-}
-
-/** Recipe list query parameters */
-export type RecipeListQuery = {
-  search?: string
-  mealType?: 'breakfast' | 'lunch' | 'dinner'
-  creationMethod?: RecipeCreationMethod
-  page?: number
-  pageSize?: number
-  sort?: string
-}
-
-// ============================================================================
-// ERROR TYPES
-// ============================================================================
-
-/** API error response */
-export type ApiError = {
-  error: string
-  message?: string
-  statusCode: number
-}
-
-/** Validation error details */
-export type ValidationError = {
-  field: string
-  message: string
-}
-
-// ============================================================================
-// UTILITY TYPES
-// ============================================================================
-
-/** Generic success response with message */
-export type SuccessResponse = {
-  message: string
-}
-
-/** Generic ID parameter type */
-export type IdParam = {
-  id: string
-}
-
-/** Household ID parameter type */
-export type HouseholdIdParam = {
-  householdId: string
-}
-
-/** Pantry ID parameter type */
-export type PantryIdParam = {
-  pantryId: string
-}
-
-/** Shopping list ID parameter type */
-export type ShoppingListIdParam = {
-  listId: string
-}
-
-/** Token parameter type for invitations */
-export type TokenParam = {
+// Authentication Responses
+export interface RegisterResponse {
+  user: User
   token: string
+}
+
+export interface LoginResponse {
+  user: User
+  token: string
+}
+
+export interface ChangePasswordResponse {
+  message: string
+}
+
+// Household Responses
+export interface HouseholdsListResponse {
+  data: Household[]
+}
+
+export type CreateHouseholdResponse = Household
+
+export type GetHouseholdResponse = HouseholdWithMembers
+
+export interface MembersListResponse {
+  data: User[]
+}
+
+export interface InviteMemberResponse {
+  invitation: Invitation
+}
+
+// Invitation Responses
+export interface InvitationsListResponse {
+  data: Invitation[]
+}
+
+export interface CreateInvitationResponse {
+  invitation: Invitation
+}
+
+export interface AcceptInvitationResponse {
+  membership: Membership
+}
+
+// Pantry Responses
+export type GetPantryResponse = PantryWithItems
+
+export interface AddPantryItemsResponse {
+  items: PantryItem[]
+}
+
+export interface ListPantryItemsResponse {
+  data: PantryItem[]
+}
+
+export type UpdatePantryItemResponse = PantryItem
+
+// Recipe Responses
+export interface RecipesListResponse {
+  data: Recipe[]
+  pagination: Pagination
+}
+
+export type CreateRecipeResponse = Recipe
+
+export type GetRecipeResponse = Recipe
+
+export type UpdateRecipeResponse = Recipe
+
+export interface GenerateRecipeResponse {
+  recipe: Recipe
+  warnings?: string[]
+}
+
+// Shopping List Responses
+export type GetShoppingListResponse = ShoppingListWithItems
+
+export interface GenerateShoppingListResponse {
+  items: ShoppingListItem[]
+}
+
+export interface ListShoppingListItemsResponse {
+  data: ShoppingListItem[]
+}
+
+export interface AddShoppingListItemsResponse {
+  items: ShoppingListItem[]
+}
+
+export interface MarkPurchasedResponse {
+  item: ShoppingListItem
+  pantryItem: PantryItem
 }
