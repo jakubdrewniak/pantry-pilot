@@ -8,7 +8,11 @@ alwaysApply: false
 
 #### REACT_CODING_STANDARDS
 
-- Use functional components with hooks instead of class components
+- Use functional components (arrow functions) with hooks instead of class components
+- Avoid React.FC type annotation - use explicit return types instead (e.g., `const Component = (props: Props): JSX.Element => {}`)
+- For components with conditional rendering, use return type `JSX.Element | null`
+- For components that always render, use return type `JSX.Element`
+- Import only what you need from react (e.g., `import { useState } from 'react'`) instead of `import * as React`
 - Implement React.memo() for expensive components that render often with the same props
 - Utilize React.lazy() and Suspense for code-splitting and performance optimization
 - Use the useCallback hook for event handlers passed to child components to prevent unnecessary re-renders
