@@ -41,6 +41,7 @@ const navigationItems = [
  * - Active state highlighting
  * - Icons with labels
  * - Semantic HTML with <nav> element
+ * - Hidden on auth pages (/auth/*)
  *
  * Accessibility:
  * - aria-label on nav for screen readers
@@ -50,6 +51,11 @@ const navigationItems = [
  */
 export function Navigation() {
   const pathname = usePathname()
+
+  // Hide navigation on authentication pages
+  if (pathname?.startsWith('/auth')) {
+    return null
+  }
 
   return (
     <nav

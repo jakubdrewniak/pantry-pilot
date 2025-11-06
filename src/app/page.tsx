@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { ChefHat, Sparkles, Heart, CheckCircle } from 'lucide-react'
+import { ChefHat, Sparkles, CheckCircle, LogIn, UserPlus, KeyRound, Lock } from 'lucide-react'
+import Link from 'next/link'
 
 export default function Home() {
   return (
@@ -106,15 +107,53 @@ export default function Home() {
           </Card>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button variant="default" size="lg" className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4" />
-              Get Started
+            <Button variant="default" size="lg" className="flex items-center gap-2" asChild>
+              <Link href="/auth/login">
+                <LogIn className="h-4 w-4" />
+                Login
+              </Link>
             </Button>
-            <Button variant="outline" size="lg" className="flex items-center gap-2">
-              <Heart className="h-4 w-4" />
-              Learn More
+            <Button variant="outline" size="lg" className="flex items-center gap-2" asChild>
+              <Link href="/recipes">
+                <Sparkles className="h-4 w-4" />
+                View Recipes
+              </Link>
             </Button>
           </div>
+
+          {/* Authentication Pages Demo */}
+          <Card className="max-w-md mx-auto mt-8">
+            <CardHeader>
+              <CardTitle className="text-lg">Authentication Pages</CardTitle>
+              <CardDescription>Test the new authentication UI</CardDescription>
+            </CardHeader>
+            <CardContent className="grid grid-cols-2 gap-3">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/auth/login" className="flex items-center gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Login
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/auth/register" className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Register
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/auth/forgot-password" className="flex items-center gap-2">
+                  <KeyRound className="h-4 w-4" />
+                  Forgot Password
+                </Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/auth/reset-password?token=demo123" className="flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  Reset Password
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
 
           <div className="mt-8 text-sm text-gray-500 dark:text-gray-400">
             <p>Tech Stack: Next.js 15 • React 19 • TypeScript • Tailwind CSS • ESLint v9</p>
