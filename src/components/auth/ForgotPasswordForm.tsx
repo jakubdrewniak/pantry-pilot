@@ -1,109 +1,42 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useActionState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { FormError } from './FormError'
-import { forgotPasswordSchema, type ForgotPasswordInput } from '@/lib/validation/auth'
+import { forgotPassword } from '@/app/actions/auth'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
-interface ForgotPasswordFormProps {
-  onSuccess?: () => void
-}
-
 /**
  * ForgotPasswordForm Component
  *
- * Form for requesting a password reset link.
+ * Form for requesting a password reset link via email.
+ * Integrated with Server Actions for password reset requests.
  *
  * Features:
  * - Email input only
- * - Client-side validation with Zod
+ * - Server-side validation and email sending
  * - Accessible form with proper labels and ARIA attributes
  * - Loading state during submission
  * - Success message with instructions
  * - Link back to login
+ * - User enumeration protection (always shows success)
  *
  * Validation:
- * - Email: Must be valid email format
+ * - Server Action validates email format
+ * - Always returns success (security best practice)
  *
- * Props:
- * - onSuccess: Optional callback when request succeeds
- *
- * TODO: Connect to API endpoint /api/auth/forgot-password when backend is ready
+ * @returns Forgot password form component
  */
-export const ForgotPasswordForm = ({ onSuccess }: ForgotPasswordFormProps): JSX.Element => {
-  const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string>()
-  const [success, setSuccess] = useState(false)
-
-  /**
-   * Client-side validation using Zod schema
-   */
-  const validateForm = (): ForgotPasswordInput | null => {
-    setError(undefined)
-
-    const result = forgotPasswordSchema.safeParse({ email })
-
-    if (!result.success) {
-      // Get first validation error
-      const firstError = result.error.errors[0]
-      setError(firstError.message)
-      return null
-    }
-
-    return result.data
-  }
-
-  /**
-   * Handle form submission
-   * TODO: Connect to actual API when backend is implemented
-   */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    const validatedData = validateForm()
-    if (!validatedData) {
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      // TODO: Replace with actual API call to /api/auth/forgot-password
-      // const response = await fetch('/api/auth/forgot-password', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(validatedData),
-      // })
-      //
-      // if (!response.ok) {
-      //   const error = await response.json()
-      //   setError(error.message || 'Failed to send reset link.')
-      //   return
-      // }
-
-      // Placeholder: simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-
-      // For now, just show success message
-      console.log('Password reset request for:', { email: validatedData.email })
-      setSuccess(true)
-      onSuccess?.()
-    } catch (err) {
-      setError('An error occurred. Please try again.')
-      console.error('Forgot password error:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+export const ForgotPasswordForm = (): JSX.Element => {
+  const [state, formAction, isPending] = useActionState(forgotPassword, undefined)
+  const [submittedEmail, setSubmittedEmail] = useState('')
 
   // Show success state
-  if (success) {
+  if (state?.success) {
     return (
       <div className="space-y-4">
         <Alert className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
@@ -111,8 +44,8 @@ export const ForgotPasswordForm = ({ onSuccess }: ForgotPasswordFormProps): JSX.
           <AlertDescription className="text-green-800 dark:text-green-200">
             <strong>Check your email!</strong>
             <br />
-            If an account exists for <strong>{email}</strong>, you will receive a password reset
-            link shortly.
+            If an account exists for <strong>{submittedEmail}</strong>, you will receive a password
+            reset link shortly.
           </AlertDescription>
         </Alert>
 
@@ -129,7 +62,15 @@ export const ForgotPasswordForm = ({ onSuccess }: ForgotPasswordFormProps): JSX.
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form
+      action={data => {
+        // Capture email before submitting (for success message)
+        const email = data.get('email')
+        if (email) setSubmittedEmail(email.toString())
+        formAction(data)
+      }}
+      className="space-y-6"
+    >
       {/* Email Field */}
       <div className="space-y-2">
         <Label htmlFor="email">
@@ -141,10 +82,9 @@ export const ForgotPasswordForm = ({ onSuccess }: ForgotPasswordFormProps): JSX.
           type="email"
           autoComplete="email"
           placeholder="name@example.com"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          disabled={isLoading}
-          aria-invalid={!!error}
+          required
+          disabled={isPending}
+          aria-invalid={!!state?.error}
           aria-describedby="email-description"
         />
         <p id="email-description" className="text-xs text-muted-foreground">
@@ -153,15 +93,15 @@ export const ForgotPasswordForm = ({ onSuccess }: ForgotPasswordFormProps): JSX.
       </div>
 
       {/* Error Display */}
-      {error && (
+      {state?.error && (
         <div id="form-error">
-          <FormError message={error} />
+          <FormError message={state.error} />
         </div>
       )}
 
       {/* Submit Button */}
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Sending Link...' : 'Send Reset Link'}
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? 'Sending Link...' : 'Send Reset Link'}
       </Button>
 
       {/* Back to Login Link */}

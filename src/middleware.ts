@@ -39,19 +39,77 @@ export async function middleware(request: NextRequest) {
   // supabase.auth.getUser(). A simple mistake could make it very hard to debug
   // issues with users being randomly logged out.
 
-  await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  // Optionally protect routes or add additional middleware logic here
-  // Example:
-  // const {
-  //   data: { user },
-  // } = await supabase.auth.getUser();
-  // if (!user && !request.nextUrl.pathname.startsWith('/login')) {
-  //   const url = request.nextUrl.clone();
-  //   url.pathname = '/login';
-  //   return NextResponse.redirect(url);
-  // }
+  // Define public paths that don't require authentication
+  const publicPaths = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/callback',
+  ]
+  const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
+  const isHomePage = request.nextUrl.pathname === '/'
 
+  console.log('🔷 Middleware:', {
+    pathname: request.nextUrl.pathname,
+    hasUser: !!user,
+    isPublicPath,
+    isHomePage,
+  })
+
+  // Home page (/) redirects based on authentication state
+  if (isHomePage) {
+    const url = request.nextUrl.clone()
+    if (user) {
+      // TODO: Redirect to /pantry when pantry page is implemented
+      url.pathname = '/recipes'
+    } else {
+      url.pathname = '/auth/login'
+    }
+    return NextResponse.redirect(url)
+  }
+
+  // Redirect to login if user is not authenticated and trying to access protected route
+  if (!user && !isPublicPath) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/auth/login'
+    // Preserve the original URL as redirect target after login
+    url.searchParams.set('redirectTo', request.nextUrl.pathname)
+    return NextResponse.redirect(url)
+  }
+
+  // Redirect to recipes if user is authenticated and trying to access auth pages
+  // Exceptions:
+  // - /auth/callback handles its own redirects
+  // - /auth/reset-password allows recovery sessions (user has session but needs to set password)
+  const isResetPasswordPage = request.nextUrl.pathname.startsWith('/auth/reset-password')
+  if (
+    user &&
+    isPublicPath &&
+    !request.nextUrl.pathname.startsWith('/auth/callback') &&
+    !isResetPasswordPage
+  ) {
+    console.log('🔀 Middleware: Redirecting authenticated user from auth page to /recipes')
+    const url = request.nextUrl.clone()
+    // TODO: Redirect to /pantry when pantry page is implemented
+    url.pathname = '/recipes'
+    return NextResponse.redirect(url)
+  }
+
+  // IMPORTANT: You *must* return the supabaseResponse object as it is.
+  // If you're creating a new response object with NextResponse.next() make sure to:
+  // 1. Pass the request in it, like so:
+  //    const myNewResponse = NextResponse.next({ request })
+  // 2. Copy over the cookies, like so:
+  //    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
+  // 3. Change the myNewResponse object to fit your needs, but avoid changing
+  //    the cookies!
+  // 4. Finally:
+  //    return myNewResponse
   return supabaseResponse
 }
 

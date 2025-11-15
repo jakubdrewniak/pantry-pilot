@@ -1,114 +1,43 @@
 'use client'
 
-import { useState } from 'react'
+import { useActionState } from 'react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { FormError } from './FormError'
-import { resetPasswordSchema } from '@/lib/validation/auth'
+import { resetPassword } from '@/app/actions/auth'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 
-interface ResetPasswordFormProps {
-  token: string
-  onSuccess?: () => void
-}
-
 /**
  * ResetPasswordForm Component
  *
- * Form for setting a new password from a reset token.
+ * Form for setting a new password after clicking reset link from email.
+ * Integrated with Server Actions and Supabase Auth.
  *
  * Features:
  * - Password and confirm password inputs
- * - Token from URL (hidden from user)
- * - Client-side validation with Zod
+ * - Server-side validation and password update
  * - Password strength requirements displayed
  * - Accessible form with proper labels and ARIA attributes
  * - Loading state during submission
  * - Success message with redirect to login
  *
  * Validation:
- * - Password: Min 8 chars, digit, special character
- * - Confirm Password: Must match password
- * - Token: Must be valid (checked on server)
+ * - Server Action validates password strength and match
+ * - Supabase verifies session token automatically
  *
- * Props:
- * - token: Reset token from URL
- * - onSuccess: Optional callback when reset succeeds
+ * Note: This component expects the user to have a valid session from the
+ * reset link (Supabase sets session from hash fragments)
  *
- * TODO: Connect to API endpoint /api/auth/reset-password when backend is ready
+ * @returns Reset password form component
  */
-export const ResetPasswordForm = ({ token, onSuccess }: ResetPasswordFormProps): JSX.Element => {
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string>()
-  const [success, setSuccess] = useState(false)
-
-  /**
-   * Client-side validation using Zod schema
-   */
-  const validateForm = (): boolean => {
-    setError(undefined)
-
-    const result = resetPasswordSchema.safeParse({ password, confirmPassword, token })
-
-    if (!result.success) {
-      // Get first validation error
-      const firstError = result.error.errors[0]
-      setError(firstError.message)
-      return false
-    }
-
-    return true
-  }
-
-  /**
-   * Handle form submission
-   * TODO: Connect to actual API when backend is implemented
-   */
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      // TODO: Replace with actual API call to /api/auth/reset-password
-      // const response = await fetch('/api/auth/reset-password', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ password, token }),
-      // })
-      //
-      // if (!response.ok) {
-      //   const error = await response.json()
-      //   setError(error.message || 'Invalid or expired reset token.')
-      //   return
-      // }
-
-      // Placeholder: simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500))
-
-      // For now, just show success message
-      console.log('Password reset successful with token:', token)
-      setSuccess(true)
-      onSuccess?.()
-    } catch (err) {
-      setError('An error occurred while resetting your password. Please try again.')
-      console.error('Reset password error:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+export const ResetPasswordForm = (): JSX.Element => {
+  const [state, formAction, isPending] = useActionState(resetPassword, undefined)
 
   // Show success state
-  if (success) {
+  if (state?.success) {
     return (
       <div className="space-y-4">
         <Alert className="bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800">
@@ -128,7 +57,7 @@ export const ResetPasswordForm = ({ token, onSuccess }: ResetPasswordFormProps):
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form action={formAction} className="space-y-4">
       {/* Password Field */}
       <div className="space-y-2">
         <Label htmlFor="password">
@@ -140,10 +69,9 @@ export const ResetPasswordForm = ({ token, onSuccess }: ResetPasswordFormProps):
           type="password"
           autoComplete="new-password"
           placeholder="••••••••"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          disabled={isLoading}
-          aria-invalid={!!error}
+          required
+          disabled={isPending}
+          aria-invalid={!!state?.error}
           aria-describedby="password-requirements"
         />
         <p id="password-requirements" className="text-xs text-muted-foreground">
@@ -162,24 +90,23 @@ export const ResetPasswordForm = ({ token, onSuccess }: ResetPasswordFormProps):
           type="password"
           autoComplete="new-password"
           placeholder="••••••••"
-          value={confirmPassword}
-          onChange={e => setConfirmPassword(e.target.value)}
-          disabled={isLoading}
-          aria-invalid={!!error}
-          aria-describedby={error ? 'form-error' : undefined}
+          required
+          disabled={isPending}
+          aria-invalid={!!state?.error}
+          aria-describedby={state?.error ? 'form-error' : undefined}
         />
       </div>
 
       {/* Error Display */}
-      {error && (
+      {state?.error && (
         <div id="form-error">
-          <FormError message={error} />
+          <FormError message={state.error} />
         </div>
       )}
 
       {/* Submit Button */}
-      <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? 'Resetting Password...' : 'Reset Password'}
+      <Button type="submit" className="w-full" disabled={isPending}>
+        {isPending ? 'Resetting Password...' : 'Reset Password'}
       </Button>
 
       {/* Back to Login Link */}
