@@ -84,6 +84,13 @@ src/
 - **lint-staged** - Pre-commit quality checks
 - **commitlint** - Conventional commit enforcement
 
+### Testing Tools
+
+- **Vitest** - Fast, TypeScript-native unit and integration testing
+- **React Testing Library** - Component testing focused on user behavior
+- **Playwright** - Multi-browser end-to-end testing with tracing
+- **Zod** - Runtime type checking and API contract validation
+
 ## 🏃 Development
 
 ### Available Scripts
@@ -103,6 +110,18 @@ npm run lint
 
 # Format code with Prettier
 npm run format
+
+# Run unit and integration tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run end-to-end tests
+npm run test:e2e
 
 # Prepare husky hooks (runs automatically)
 npm run prepare
@@ -155,6 +174,60 @@ The application supports both light and dark themes:
 - Manual theme switching capability
 - CSS variables for consistent theming
 
+## 🧪 Testing
+
+Pantry Pilot uses a comprehensive testing strategy to ensure reliability and prevent regressions:
+
+### Testing Layers
+
+**Unit Tests (Vitest + React Testing Library)**
+
+- React components and custom hooks
+- Utility functions and business logic
+- Form validation and data transformation
+- Focus on behavior, not implementation details
+
+**Integration Tests (Vitest)**
+
+- API routes with realistic request/response cycles
+- Data flow between components and endpoints
+- Authentication and authorization workflows
+- Error handling and edge cases
+
+**End-to-End Tests (Playwright)**
+
+- Critical user journeys (auth, pantry CRUD, recipe generation)
+- Cross-browser compatibility (Chromium, Firefox, WebKit)
+- Real-time collaboration features
+- Multi-step workflows
+
+### Testing Philosophy
+
+- **Pragmatic coverage**: Aim for 60-80% coverage on meaningful code
+- **Behavior over implementation**: Test what users experience
+- **Fast feedback**: Keep test suite fast for good developer experience
+- **Regression prevention**: Add tests for every bug found
+
+### Test Structure
+
+```
+tests/
+├── unit/              # Vitest unit tests
+│   ├── components/
+│   ├── hooks/
+│   └── lib/
+├── integration/       # API integration tests
+│   └── api/
+├── e2e/               # Playwright E2E tests
+│   ├── auth.spec.ts
+│   ├── pantry.spec.ts
+│   └── recipes.spec.ts
+└── helpers/           # Test utilities & mocks
+    ├── mocks/
+    ├── fixtures/
+    └── factories.ts
+```
+
 ## 🔧 Configuration Files
 
 - `components.json` - shadcn/ui CLI configuration
@@ -163,6 +236,8 @@ The application supports both light and dark themes:
 - `commitlint.config.js` - Commit message conventions
 - `next.config.ts` - Next.js configuration
 - `postcss.config.mjs` - PostCSS with Tailwind and Autoprefixer
+- `vitest.config.ts` - Vitest testing configuration
+- `playwright.config.ts` - Playwright E2E testing configuration
 
 ## 🚀 Deployment
 
