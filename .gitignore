@@ -103,3 +103,16 @@ temp/
 
 # Turbo
 .turbo
+
+# testing
+/coverage
+/test-results
+/playwright-report
+/blob-report
+
+# vitest
+coverage/
+.vitest/
+
+# playwright
+playwright/.cache/
