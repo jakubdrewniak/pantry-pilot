@@ -116,3 +116,6 @@ coverage/
 
 # playwright
 playwright/.cache/
+playwright-report/
+test-results/
+*.trace.zip
