@@ -23,7 +23,7 @@ const passwordSchema = z
   .string()
   .min(8, 'Password must be at least 8 characters.')
   .regex(/\d/, 'Password must contain at least one digit.')
-  .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character.')
+  .regex(/[!@#$%^&*(),.?":{}|<>_]/, 'Password must contain at least one special character.')
 
 /**
  * Login form validation schema
