@@ -38,5 +38,35 @@ export const GenerateRecipeRequestSchema = z.object({
   }),
 })
 
+/**
+ * Zod schema for creating a manual recipe
+ * Validates the request body for the POST /api/recipes endpoint
+ * More restrictive than RecipeSchema (used for AI-generated recipes)
+ */
+export const CreateRecipeSchema = z.object({
+  title: z
+    .string()
+    .min(3, 'Title must be at least 3 characters')
+    .max(100, 'Title must be at most 100 characters'),
+  ingredients: z.array(IngredientSchema).min(1, 'At least one ingredient is required'),
+  instructions: z.string().min(1, 'Instructions are required'),
+  prepTime: z
+    .number()
+    .int('Prep time must be an integer')
+    .min(0, 'Prep time must be non-negative')
+    .optional(),
+  cookTime: z
+    .number()
+    .int('Cook time must be an integer')
+    .min(0, 'Cook time must be non-negative')
+    .optional(),
+  mealType: z
+    .enum(['breakfast', 'lunch', 'dinner'], {
+      errorMap: () => ({ message: "Meal type must be 'breakfast', 'lunch', or 'dinner'" }),
+    })
+    .optional(),
+})
+
 export type GenerateRecipeRequest = z.infer<typeof GenerateRecipeRequestSchema>
 export type RecipeValidation = z.infer<typeof RecipeSchema>
+export type CreateRecipeInput = z.infer<typeof CreateRecipeSchema>

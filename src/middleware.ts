@@ -54,11 +54,16 @@ export async function middleware(request: NextRequest) {
   const isPublicPath = publicPaths.some(path => request.nextUrl.pathname.startsWith(path))
   const isHomePage = request.nextUrl.pathname === '/'
 
+  // API routes handle their own authentication
+  // Skip middleware redirect logic for API endpoints
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+
   console.log('🔷 Middleware:', {
     pathname: request.nextUrl.pathname,
     hasUser: !!user,
     isPublicPath,
     isHomePage,
+    isApiRoute,
   })
 
   // Home page (/) redirects based on authentication state
@@ -71,6 +76,11 @@ export async function middleware(request: NextRequest) {
       url.pathname = '/auth/login'
     }
     return NextResponse.redirect(url)
+  }
+
+  // API routes handle their own authentication - skip redirect logic
+  if (isApiRoute) {
+    return supabaseResponse
   }
 
   // Redirect to login if user is not authenticated and trying to access protected route

@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { RecipeSchema } from '@/lib/validation/recipes'
+import { authenticateRequest } from '@/lib/api-auth'
 import { openRouter } from '@/lib/openrouter'
-import { RECIPE_GENERATION_SYSTEM_PROMPT, buildRecipeGenerationPrompt } from '@/lib/prompts'
-import { createRecipeResponseFormat } from '@/lib/recipe-schema-helper'
-import { GenerateRecipeRequestSchema } from '@/lib/validation/recipes'
-import type { GenerateRecipeResponse, Recipe } from '@/types/types'
 import {
   OpenRouterError,
   OpenRouterAuthError,
   OpenRouterNetworkError,
   OpenRouterServerError,
 } from '@/lib/openrouter-service'
+import { RECIPE_GENERATION_SYSTEM_PROMPT, buildRecipeGenerationPrompt } from '@/lib/prompts'
+import { createRecipeResponseFormat } from '@/lib/recipe-schema-helper'
+import { RecipeSchema, GenerateRecipeRequestSchema } from '@/lib/validation/recipes'
+import type { GenerateRecipeResponse, Recipe } from '@/types/types'
 
 /**
  * Predefined pantry items for development/testing
@@ -34,14 +34,23 @@ const MOCK_PANTRY_ITEMS: Array<{ name: string; quantity: number; unit: string | 
  * Generates a new recipe using AI based on user hint and optionally pantry items.
  * Returns 202 Accepted with the generated recipe and any warnings.
  *
+ * Headers:
+ * - Authorization: Bearer <token>
+ *
  * @note This is a development version without database integration.
- * TODO: Add authentication and database queries when database is ready.
+ * TODO: Add database queries for pantry items when database is ready.
+ *
+ * @see src/lib/api-auth.ts - authentication helper
  */
 export async function POST(
   request: NextRequest
 ): Promise<NextResponse<GenerateRecipeResponse | { error: string }>> {
   try {
-    // TODO: handle auth
+    // 1. Authentication
+    const { errorResponse } = await authenticateRequest(request)
+    if (errorResponse) return errorResponse
+    // Note: user is available from authenticateRequest but not used yet
+    // TODO: Use user.id when saving to database
 
     // 2. Validate request body
     const body = await request.json()

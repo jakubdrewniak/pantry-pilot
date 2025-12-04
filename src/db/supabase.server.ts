@@ -1,3 +1,20 @@
+/**
+ * Supabase Client - SERVER (Cookie-based)
+ *
+ * Use this client in:
+ * - Server Components
+ * - Server Actions (login, logout, etc.)
+ * - Middleware
+ *
+ * Authentication is handled via HTTP-only cookies.
+ *
+ * DO NOT use in:
+ * - React components (use supabase.client.ts)
+ * - API Routes (use supabase.api.ts)
+ *
+ * @see supabase.client.ts - for browser/React components
+ * @see supabase.api.ts - for API Routes with Bearer token auth
+ */
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
