@@ -70,3 +70,134 @@ export const CreateRecipeSchema = z.object({
 export type GenerateRecipeRequest = z.infer<typeof GenerateRecipeRequestSchema>
 export type RecipeValidation = z.infer<typeof RecipeSchema>
 export type CreateRecipeInput = z.infer<typeof CreateRecipeSchema>
+
+// ============================================================================
+// LIST RECIPES QUERY PARAMETERS (GET /api/recipes)
+// ============================================================================
+
+/**
+ * Allowed sort values for recipe listing
+ * Prefix '-' indicates descending order
+ */
+const ALLOWED_SORT_VALUES = [
+  'createdAt',
+  '-createdAt',
+  'title',
+  '-title',
+  'updatedAt',
+  '-updatedAt',
+] as const
+
+/**
+ * Zod schema for GET /api/recipes query parameters
+ * Validates and parses query parameters from URL
+ *
+ * Query parameters come as strings from URL, so we use
+ * .transform() to convert to proper types (string → number)
+ */
+export const ListRecipesQuerySchema = z.object({
+  search: z
+    .string()
+    .max(200, 'Search query must be at most 200 characters')
+    .optional()
+    .transform(val => val?.trim()), // Trim whitespace
+
+  mealType: z
+    .enum(['breakfast', 'lunch', 'dinner'], {
+      errorMap: () => ({
+        message: "Meal type must be 'breakfast', 'lunch', or 'dinner'",
+      }),
+    })
+    .optional(),
+
+  creationMethod: z
+    .enum(['manual', 'ai_generated', 'ai_generated_modified'], {
+      errorMap: () => ({
+        message: "Creation method must be 'manual', 'ai_generated', or 'ai_generated_modified'",
+      }),
+    })
+    .optional(),
+
+  page: z
+    .string()
+    .optional()
+    .default('1')
+    .transform(val => parseInt(val, 10))
+    .pipe(z.number().int('Page must be an integer').min(1, 'Page must be at least 1')),
+
+  pageSize: z
+    .string()
+    .optional()
+    .default('20')
+    .transform(val => parseInt(val, 10))
+    .pipe(
+      z
+        .number()
+        .int('Page size must be an integer')
+        .min(1, 'Page size must be at least 1')
+        .max(100, 'Page size must be at most 100')
+    ),
+
+  sort: z
+    .enum(ALLOWED_SORT_VALUES, {
+      errorMap: () => ({
+        message: 'Sort must be one of: createdAt, -createdAt, title, -title, updatedAt, -updatedAt',
+      }),
+    })
+    .optional()
+    .default('-createdAt'),
+})
+
+/**
+ * TypeScript type inferred from schema
+ */
+export type ListRecipesQuery = z.infer<typeof ListRecipesQuerySchema>
+
+/**
+ * Filters for recipe listing (used internally in service layer)
+ * Transformed version of ListRecipesQuery with parsed sort field
+ */
+export interface RecipeFilters {
+  search?: string
+  mealType?: string
+  creationMethod?: string
+  page: number
+  pageSize: number
+  sortField: string
+  sortDirection: 'asc' | 'desc'
+}
+
+/**
+ * Parses sort parameter into field and direction
+ *
+ * Converts camelCase API parameter to snake_case database column.
+ * Prefix '-' indicates descending order.
+ *
+ * @param sort - Sort string (e.g., 'createdAt', '-createdAt')
+ * @returns Object with field name and direction
+ *
+ * @example
+ * parseSortParam('createdAt')   // { field: 'created_at', direction: 'asc' }
+ * parseSortParam('-createdAt')  // { field: 'created_at', direction: 'desc' }
+ * parseSortParam('title')       // { field: 'title', direction: 'asc' }
+ */
+export function parseSortParam(sort: string): {
+  field: string
+  direction: 'asc' | 'desc'
+} {
+  const isDescending = sort.startsWith('-')
+  const fieldName = isDescending ? sort.slice(1) : sort
+
+  // Map camelCase to snake_case for database columns
+  // 'title' is special - it's in JSONB content, handled separately in query
+  const fieldMapping: Record<string, string> = {
+    createdAt: 'created_at',
+    updatedAt: 'updated_at',
+    title: 'title', // Will use 'content->title' in Supabase query
+  }
+
+  return {
+    field: fieldMapping[fieldName] || fieldName,
+    direction: isDescending ? 'desc' : 'asc',
+  }
+}

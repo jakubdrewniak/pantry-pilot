@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/db/database.types'
-import type { CreateRecipeInput } from '@/lib/validation/recipes'
-import type { Recipe } from '@/types/types'
+import type { CreateRecipeInput, RecipeFilters } from '@/lib/validation/recipes'
+import type { Recipe, Pagination } from '@/types/types'
 
 /**
  * Type alias for Supabase client with database types
@@ -113,7 +113,8 @@ export class RecipeService {
       .from('recipes')
       .insert({
         household_id: householdId,
-        content: recipeContent,
+        content:
+          recipeContent as unknown as Database['public']['Tables']['recipes']['Insert']['content'],
         creation_method: 'manual',
       })
       .select()
@@ -126,6 +127,111 @@ export class RecipeService {
 
     // Transform database record to Recipe DTO
     return this.mapDbRecipeToDto(data)
+  }
+
+  /**
+   * Lists recipes for a user's household with filtering and pagination
+   *
+   * @param userId - The authenticated user's ID
+   * @param filters - Filter, sort, and pagination options
+   * @returns Paginated list of recipes with metadata
+   * @throws Error if database operation fails
+   *
+   * Flow:
+   * 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+   * 2. Build Supabase query with filters
+   * 3. Apply search filter (full-text on JSONB)
+   * 4. Apply mealType and creationMethod filters
+   * 5. Apply sorting (handle title in JSONB separately)
+   * 6. Apply pagination (range)
+   * 7. Execute query with count
+   * 8. Transform database records to Recipe DTOs
+   *
+   * Similar to Angular's service pattern - encapsulates complex query logic.
+   *
+   * TEMPORARY: Uses DEFAULT_HOUSEHOLD_ID as fallback for development.
+   * TODO: Once households are implemented, consider returning error
+   * when user is not a member of any household.
+   */
+  async listRecipes(
+    userId: string,
+    filters: RecipeFilters
+  ): Promise<{ data: Recipe[]; pagination: Pagination }> {
+    // 1. Get household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+    let householdId = await this.getUserHouseholdId(userId)
+
+    // TEMPORARY WORKAROUND: Use default household for single-user development
+    // TODO: Remove this fallback once household management is fully implemented
+    if (!householdId) {
+      console.warn(
+        `[RecipeService] User ${userId} has no household. Using DEFAULT_HOUSEHOLD_ID for development.`
+      )
+      householdId = DEFAULT_HOUSEHOLD_ID
+    }
+
+    // 2. Build base query
+    let query = this.supabase
+      .from('recipes')
+      .select('*', { count: 'exact' })
+      .eq('household_id', householdId)
+
+    // 3. Apply search filter (case-insensitive search in recipe title)
+    if (filters.search) {
+      // Search in title field within JSONB content
+      // Use ilike for case-insensitive pattern matching
+      query = query.ilike('content->>title', `%${filters.search}%`)
+    }
+
+    // 4. Apply mealType filter
+    if (filters.mealType) {
+      // Use ->> to extract text value from JSONB for comparison
+      query = query.eq('content->>meal_type', filters.mealType)
+    }
+
+    // 5. Apply creationMethod filter
+    if (filters.creationMethod) {
+      query = query.eq(
+        'creation_method',
+        filters.creationMethod as 'manual' | 'ai_generated' | 'ai_generated_modified'
+      )
+    }
+
+    // 6. Apply sorting
+    const ascending = filters.sortDirection === 'asc'
+
+    if (filters.sortField === 'title') {
+      // Title is in JSONB content - use ->> to extract text value
+      query = query.order('content->>title', { ascending })
+    } else {
+      // created_at, updated_at are direct columns
+      query = query.order(filters.sortField, { ascending })
+    }
+
+    // 7. Apply pagination
+    const from = (filters.page - 1) * filters.pageSize
+    const to = from + filters.pageSize - 1
+    query = query.range(from, to)
+
+    // 8. Execute query
+    const { data, error, count } = await query
+
+    if (error) {
+      console.error('[RecipeService] Error listing recipes:', error)
+      throw new Error('Failed to fetch recipes')
+    }
+
+    // 9. Transform to DTOs using existing method
+    const recipes = data?.map(record => this.mapDbRecipeToDto(record)) || []
+
+    // 10. Return with pagination metadata
+    return {
+      data: recipes,
+      pagination: {
+        page: filters.page,
+        pageSize: filters.pageSize,
+        total: count || 0,
+      },
+    }
   }
 
   /**
@@ -143,7 +249,7 @@ export class RecipeService {
    */
   private mapDbRecipeToDto(dbRecipe: Database['public']['Tables']['recipes']['Row']): Recipe {
     // Parse JSONB content
-    const content = dbRecipe.content as RecipeContent
+    const content = dbRecipe.content as unknown as RecipeContent
 
     return {
       id: dbRecipe.id,
