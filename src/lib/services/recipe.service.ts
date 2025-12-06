@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/db/database.types'
 import type { CreateRecipeInput, RecipeFilters } from '@/lib/validation/recipes'
-import type { Recipe, Pagination } from '@/types/types'
+import type { Recipe, Pagination, BulkDeleteRecipesResponse } from '@/types/types'
 
 /**
  * Type alias for Supabase client with database types
@@ -127,6 +127,128 @@ export class RecipeService {
 
     // Transform database record to Recipe DTO
     return this.mapDbRecipeToDto(data)
+  }
+
+  /**
+   * Deletes multiple recipes in a single operation
+   *
+   * @param userId - The authenticated user's ID
+   * @param recipeIds - Array of recipe UUIDs to delete (1-50 items)
+   * @returns BulkDeleteRecipesResponse with deleted, failed arrays and summary
+   * @throws Error for database errors (never throws for individual recipe failures)
+   *
+   * Flow:
+   * 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+   * 2. For each recipe ID:
+   *    a. Verify recipe exists and belongs to user's household
+   *    b. If yes → delete and add to 'deleted' array
+   *    c. If no → add to 'failed' array with reason
+   * 3. Return detailed results with summary
+   *
+   * Important:
+   * - Processes all IDs even if some fail (partial success)
+   * - Does NOT use transaction (each delete is independent)
+   * - Returns 200 OK even if all deletions fail (check response body)
+   * - Maximum 50 recipes per request to prevent abuse
+   *
+   * Security Pattern:
+   * - Same authorization check as single delete
+   * - Failed items don't reveal why (could be not found OR no access)
+   *
+   * Performance Considerations:
+   * - Current implementation: N+2 queries (household + N verifications + N deletes)
+   * - Optimization possible: Use bulk queries with ANY() operator
+   * - Trade-off: Simplicity vs performance (optimize if needed)
+   *
+   * Why no transaction?
+   * - Partial success is desirable (delete what we can)
+   * - User gets feedback on what succeeded vs failed
+   * - More user-friendly than all-or-nothing approach
+   *
+   * TEMPORARY: Uses DEFAULT_HOUSEHOLD_ID as fallback for development.
+   */
+  async bulkDeleteRecipes(userId: string, recipeIds: string[]): Promise<BulkDeleteRecipesResponse> {
+    // 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+    let householdId = await this.getUserHouseholdId(userId)
+
+    // TEMPORARY WORKAROUND: Use default household for single-user development
+    if (!householdId) {
+      console.warn(
+        `[RecipeService] User ${userId} has no household. Using DEFAULT_HOUSEHOLD_ID for development.`
+      )
+      householdId = DEFAULT_HOUSEHOLD_ID
+    }
+
+    // 2. Initialize result arrays
+    const deleted: string[] = []
+    const failed: Array<{ id: string; reason: string }> = []
+
+    // 3. Process each recipe ID
+    // Note: We process sequentially for simplicity. Could be optimized with bulk queries.
+    for (const recipeId of recipeIds) {
+      try {
+        // 3a. Verify recipe exists and user has access
+        const { data: existingRecipe, error: checkError } = await this.supabase
+          .from('recipes')
+          .select('id')
+          .eq('id', recipeId)
+          .eq('household_id', householdId)
+          .single()
+
+        if (checkError || !existingRecipe) {
+          // Recipe not found or no access
+          failed.push({
+            id: recipeId,
+            reason: 'Recipe not found or no access',
+          })
+          continue // Move to next recipe
+        }
+
+        // 3b. Delete the recipe
+        const { error: deleteError } = await this.supabase
+          .from('recipes')
+          .delete()
+          .eq('id', recipeId)
+          .eq('household_id', householdId) // Double-check authorization
+
+        if (deleteError) {
+          // Database error during deletion
+          console.error('[RecipeService] Error deleting recipe in bulk:', {
+            recipeId,
+            error: deleteError.message,
+          })
+          failed.push({
+            id: recipeId,
+            reason: 'Failed to delete',
+          })
+          continue
+        }
+
+        // 3c. Success - add to deleted array
+        deleted.push(recipeId)
+      } catch (error) {
+        // Unexpected error for this specific recipe
+        console.error('[RecipeService] Unexpected error in bulk delete:', {
+          recipeId,
+          error,
+        })
+        failed.push({
+          id: recipeId,
+          reason: 'Unexpected error',
+        })
+      }
+    }
+
+    // 4. Return detailed results
+    return {
+      deleted,
+      failed,
+      summary: {
+        total: recipeIds.length,
+        successful: deleted.length,
+        failed: failed.length,
+      },
+    }
   }
 
   /**

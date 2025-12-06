@@ -71,6 +71,19 @@ export type GenerateRecipeRequest = z.infer<typeof GenerateRecipeRequestSchema>
 export type RecipeValidation = z.infer<typeof RecipeSchema>
 export type CreateRecipeInput = z.infer<typeof CreateRecipeSchema>
 
+/**
+ * Zod schema for bulk deleting recipes
+ * Validates the request body for the DELETE /api/recipes endpoint
+ */
+export const BulkDeleteRecipesSchema = z.object({
+  ids: z
+    .array(z.string())
+    .min(1, 'Must provide at least 1 recipe ID')
+    .max(50, 'Cannot delete more than 50 recipes at once'),
+})
+
+export type BulkDeleteRecipesInput = z.infer<typeof BulkDeleteRecipesSchema>
+
 // ============================================================================
 // LIST RECIPES QUERY PARAMETERS (GET /api/recipes)
 // ============================================================================

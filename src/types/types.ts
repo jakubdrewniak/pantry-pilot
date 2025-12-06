@@ -282,6 +282,20 @@ export interface GenerateRecipeResponse {
   warnings?: string[]
 }
 
+// Bulk Delete Response
+export interface BulkDeleteRecipesResponse {
+  deleted: string[]
+  failed: Array<{
+    id: string
+    reason: string
+  }>
+  summary: {
+    total: number
+    successful: number
+    failed: number
+  }
+}
+
 // Shopping List Responses
 export type GetShoppingListResponse = ShoppingListWithItems
 
