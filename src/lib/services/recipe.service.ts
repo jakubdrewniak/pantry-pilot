@@ -130,6 +130,240 @@ export class RecipeService {
   }
 
   /**
+   * Deletes a recipe permanently
+   *
+   * @param userId - The authenticated user's ID
+   * @param recipeId - The recipe UUID to delete
+   * @returns void (Promise<void>)
+   * @throws Error with message 'Recipe not found' if recipe doesn't exist or user has no access
+   * @throws Error for other database errors
+   *
+   * Flow:
+   * 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+   * 2. Verify recipe exists and user has access (same pattern as update)
+   * 3. Delete recipe from database
+   * 4. No return value (void)
+   *
+   * Security Pattern:
+   * - Same authorization check as getRecipeById and updateRecipe
+   * - Returns "Recipe not found" for unauthorized access
+   * - Verification step prevents accidental deletion
+   *
+   * Important:
+   * - This is a HARD DELETE (permanent)
+   * - CASCADE constraints in DB may delete related data
+   * - For soft delete, use updated_at or deleted_at field instead
+   *
+   * TEMPORARY: Uses DEFAULT_HOUSEHOLD_ID as fallback for development.
+   */
+  async deleteRecipe(userId: string, recipeId: string): Promise<void> {
+    // 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+    let householdId = await this.getUserHouseholdId(userId)
+
+    // TEMPORARY WORKAROUND: Use default household for single-user development
+    // TODO: Remove this fallback once household management is fully implemented
+    if (!householdId) {
+      console.warn(
+        `[RecipeService] User ${userId} has no household. Using DEFAULT_HOUSEHOLD_ID for development.`
+      )
+      householdId = DEFAULT_HOUSEHOLD_ID
+    }
+
+    // 2. First, verify the recipe exists and user has access
+    // This prevents deleting non-existent recipes or recipes from other households
+    const { data: existingRecipe, error: checkError } = await this.supabase
+      .from('recipes')
+      .select('id')
+      .eq('id', recipeId)
+      .eq('household_id', householdId)
+      .single()
+
+    if (checkError || !existingRecipe) {
+      if (checkError) {
+        console.error('[RecipeService] Error verifying recipe access:', {
+          recipeId,
+          userId,
+          error: checkError.message,
+        })
+      }
+      throw new Error('Recipe not found')
+    }
+
+    // 3. Delete the recipe
+    // Using the same filters for defense in depth
+    const { error } = await this.supabase
+      .from('recipes')
+      .delete()
+      .eq('id', recipeId)
+      .eq('household_id', householdId) // Double-check authorization
+
+    if (error) {
+      console.error('[RecipeService] Database error deleting recipe:', error)
+      throw new Error('Failed to delete recipe')
+    }
+
+    // 4. No return value - void
+    // Frontend knows deletion succeeded by HTTP 204 status
+  }
+
+  /**
+   * Updates an existing recipe with new content
+   *
+   * @param userId - The authenticated user's ID
+   * @param recipeId - The recipe UUID to update
+   * @param input - Validated recipe input from CreateRecipeSchema
+   * @returns Updated Recipe DTO
+   * @throws Error with message 'Recipe not found' if recipe doesn't exist or user has no access
+   * @throws Error for other database errors
+   *
+   * Flow:
+   * 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+   * 2. Verify recipe exists and user has access (same as getRecipeById)
+   * 3. Transform input to JSONB format (camelCase → snake_case)
+   * 4. Update only the 'content' field in database
+   * 5. Transform updated record to Recipe DTO
+   *
+   * Important:
+   * - Only updates the 'content' JSONB field
+   * - Does NOT update: household_id, creation_method, id
+   * - updated_at is automatically set by database trigger
+   *
+   * Security Pattern:
+   * - Uses same authorization check as getRecipeById
+   * - Returns "Recipe not found" for unauthorized access
+   *
+   * Similar to Angular's FormGroup.patchValue() - updates only specified fields.
+   *
+   * TEMPORARY: Uses DEFAULT_HOUSEHOLD_ID as fallback for development.
+   */
+  async updateRecipe(userId: string, recipeId: string, input: CreateRecipeInput): Promise<Recipe> {
+    // 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+    let householdId = await this.getUserHouseholdId(userId)
+
+    // TEMPORARY WORKAROUND: Use default household for single-user development
+    // TODO: Remove this fallback once household management is fully implemented
+    if (!householdId) {
+      console.warn(
+        `[RecipeService] User ${userId} has no household. Using DEFAULT_HOUSEHOLD_ID for development.`
+      )
+      householdId = DEFAULT_HOUSEHOLD_ID
+    }
+
+    // 2. First, verify the recipe exists and user has access
+    // This prevents updating non-existent recipes or recipes from other households
+    const { data: existingRecipe, error: checkError } = await this.supabase
+      .from('recipes')
+      .select('id')
+      .eq('id', recipeId)
+      .eq('household_id', householdId)
+      .single()
+
+    if (checkError || !existingRecipe) {
+      if (checkError) {
+        console.error('[RecipeService] Error verifying recipe access:', {
+          recipeId,
+          userId,
+          error: checkError.message,
+        })
+      }
+      throw new Error('Recipe not found')
+    }
+
+    // 3. Transform API input (camelCase) to database format (snake_case in JSONB)
+    const recipeContent: RecipeContent = {
+      title: input.title,
+      ingredients: input.ingredients,
+      instructions: input.instructions,
+      ...(input.prepTime !== undefined && { prep_time: input.prepTime }),
+      ...(input.cookTime !== undefined && { cook_time: input.cookTime }),
+      ...(input.mealType !== undefined && { meal_type: input.mealType }),
+    }
+
+    // 4. Update the recipe (only content field, updated_at is auto-updated by trigger)
+    const { data, error } = await this.supabase
+      .from('recipes')
+      .update({
+        content:
+          recipeContent as unknown as Database['public']['Tables']['recipes']['Update']['content'],
+      })
+      .eq('id', recipeId)
+      .eq('household_id', householdId) // Double-check authorization
+      .select()
+      .single()
+
+    if (error || !data) {
+      console.error('[RecipeService] Database error updating recipe:', error)
+      throw new Error('Failed to update recipe')
+    }
+
+    // 5. Transform updated record to DTO
+    return this.mapDbRecipeToDto(data)
+  }
+
+  /**
+   * Retrieves a single recipe by ID with authorization check
+   *
+   * @param userId - The authenticated user's ID
+   * @param recipeId - The recipe UUID to retrieve
+   * @returns Recipe DTO if found and authorized
+   * @throws Error with message 'Recipe not found' if recipe doesn't exist or user has no access
+   * @throws Error for other database errors
+   *
+   * Flow:
+   * 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+   * 2. Query recipe with both id AND household_id filters
+   * 3. If no result → user either doesn't have access OR recipe doesn't exist
+   * 4. Transform database record to Recipe DTO
+   *
+   * Security Pattern:
+   * - We use "Recipe not found" for both cases (not exists + no access)
+   * - This prevents leaking information about existence of other users' recipes
+   * - Similar to how Angular guards can return false without revealing why
+   *
+   * TEMPORARY: Uses DEFAULT_HOUSEHOLD_ID as fallback for development.
+   */
+  async getRecipeById(userId: string, recipeId: string): Promise<Recipe> {
+    // 1. Get user's household_id (with DEFAULT_HOUSEHOLD_ID fallback)
+    let householdId = await this.getUserHouseholdId(userId)
+
+    // TEMPORARY WORKAROUND: Use default household for single-user development
+    // TODO: Remove this fallback once household management is fully implemented
+    if (!householdId) {
+      console.warn(
+        `[RecipeService] User ${userId} has no household. Using DEFAULT_HOUSEHOLD_ID for development.`
+      )
+      householdId = DEFAULT_HOUSEHOLD_ID
+    }
+
+    // 2. Query recipe with BOTH id and household_id
+    // This ensures authorization in a single query - efficient and secure
+    const { data, error } = await this.supabase
+      .from('recipes')
+      .select('*')
+      .eq('id', recipeId)
+      .eq('household_id', householdId)
+      .single()
+
+    // 3. Handle errors and missing data
+    if (error || !data) {
+      // Log for debugging, but don't expose details to caller
+      if (error) {
+        console.error('[RecipeService] Error fetching recipe:', {
+          recipeId,
+          userId,
+          error: error.message,
+        })
+      }
+
+      // Generic error message for security (404 will be set in route handler)
+      throw new Error('Recipe not found')
+    }
+
+    // 4. Transform to DTO using existing mapper
+    return this.mapDbRecipeToDto(data)
+  }
+
+  /**
    * Lists recipes for a user's household with filtering and pagination
    *
    * @param userId - The authenticated user's ID

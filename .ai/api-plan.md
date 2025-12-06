@@ -494,9 +494,10 @@
 | ------ | --------------------- | --------------------------------------- | ------------------------------------------------------------------------- | --------------------------- |
 | GET    | /api/recipes          | List recipes (search, filter, paginate) | `?search=&mealType=&creationMethod=&page=&pageSize=&sort=`                | `200 [recipe]`              |
 | POST   | /api/recipes          | Create manual recipe                    | `{ title, ingredients[], instructions, prepTime?, cookTime?, mealType? }` | `201 recipe`                |
+| DELETE | /api/recipes          | Delete multiple recipes (bulk delete)   | `{ ids: string[] }`                                                       | `200 { deleted, failed }`   |
 | GET    | /api/recipes/{id}     | Get recipe by ID                        | (Auth header)                                                             | `200 recipe`                |
 | PUT    | /api/recipes/{id}     | Update recipe (manual or AI-edited)     | same as POST                                                              | `200 recipe`                |
-| DELETE | /api/recipes/{id}     | Delete recipe                           | (Auth header)                                                             | `204`                       |
+| DELETE | /api/recipes/{id}     | Delete single recipe                    | (Auth header)                                                             | `204`                       |
 | POST   | /api/recipes/generate | AI-powered generation                   | `{ hint?, usePantryItems: boolean }`                                      | `202 { recipe, warnings? }` |
 
 #### Detailed reference: Recipe endpoints
@@ -564,8 +565,47 @@
 
 - **Method**: DELETE
 - **URL**: `/api/recipes/{id}`
-- **Description**: Removes recipe permanently.
+- **Description**: Removes a single recipe permanently.
 - **Success Codes**: 204 No Content
+- **Error Codes**: 400 Bad Request (invalid UUID), 404 Not Found, 401 Unauthorized
+
+##### Delete multiple recipes (bulk delete)
+
+- **Method**: DELETE
+- **URL**: `/api/recipes`
+- **Description**: Removes multiple recipes in a single request. Returns detailed results including successful deletions and failures.
+- **Request Body**:
+  ```json
+  {
+    "ids": ["uuid1", "uuid2", "uuid3"]
+  }
+  ```
+- **Response Body**:
+  ```json
+  {
+    "deleted": ["uuid1", "uuid3"],
+    "failed": [
+      {
+        "id": "uuid2",
+        "reason": "Recipe not found or no access"
+      }
+    ],
+    "summary": {
+      "total": 3,
+      "successful": 2,
+      "failed": 1
+    }
+  }
+  ```
+- **Success Codes**: 200 OK (partial success is still 200)
+- **Error Codes**: 400 Bad Request (invalid body or UUIDs), 401 Unauthorized
+- **Validation / Business Logic Notes**:
+  - Accepts 1-50 recipe IDs per request (prevents abuse)
+  - Each UUID is validated for format
+  - Non-existent recipes or recipes from other households are reported in `failed` array
+  - Operation continues even if some deletions fail (partial success)
+  - All successful deletions are committed atomically per recipe
+  - Returns 200 even if all deletions fail (check `failed` array)
 
 ##### Generate recipe via AI
 
