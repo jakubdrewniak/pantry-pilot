@@ -11,7 +11,7 @@
  * - Middleware
  *
  * @see supabase.server.ts - for Server Components, Actions, Middleware
- * @see supabase.api.ts - for API Routes with Bearer token auth
+ * @see src/lib/api-auth.ts - for API Routes authentication
  */
 import { createBrowserClient } from '@supabase/ssr'
 

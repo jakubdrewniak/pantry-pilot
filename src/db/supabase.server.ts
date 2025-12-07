@@ -10,10 +10,10 @@
  *
  * DO NOT use in:
  * - React components (use supabase.client.ts)
- * - API Routes (use supabase.api.ts)
+ * - API Routes (use authenticateRequest from @/lib/api-auth)
  *
  * @see supabase.client.ts - for browser/React components
- * @see supabase.api.ts - for API Routes with Bearer token auth
+ * @see src/lib/api-auth.ts - for API Routes authentication
  */
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'

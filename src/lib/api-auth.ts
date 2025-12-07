@@ -2,7 +2,12 @@
  * API Authentication Helper
  *
  * Centralized authentication logic for API routes.
- * Extracts Bearer token from Authorization header and verifies it with Supabase.
+ * Uses cookie-based authentication - reads session from HTTP cookies automatically.
+ *
+ * How it works:
+ * 1. Middleware refreshes the session on each request (if needed)
+ * 2. This helper reads the session from cookies
+ * 3. No need for clients to send Authorization headers
  *
  * Usage:
  * ```typescript
@@ -17,12 +22,13 @@
  * }
  * ```
  */
+import { createServerClient } from '@supabase/ssr'
 import { NextRequest, NextResponse } from 'next/server'
 import type { User } from '@supabase/supabase-js'
 
-import { createClient } from '@/db/supabase.api'
+import type { Database } from '@/db/database.types'
 
-type TypedSupabaseClient = ReturnType<typeof createClient>
+type TypedSupabaseClient = ReturnType<typeof createServerClient<Database>>
 
 /**
  * Result of authenticateRequest function
@@ -37,7 +43,45 @@ interface AuthResult {
 }
 
 /**
- * Authenticates an API request using Bearer token from Authorization header
+ * Creates a Supabase client for API routes using cookies from the request
+ *
+ * @param request - Next.js API request
+ * @returns Supabase client configured with cookies from the request
+ */
+function createApiClient(request: NextRequest): TypedSupabaseClient {
+  // We need a mutable response to potentially set cookies
+  let response = NextResponse.next({ request })
+
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(
+          cookiesToSet: Array<{
+            name: string
+            value: string
+            options: Record<string, unknown>
+          }>
+        ) {
+          // Set cookies on the request for subsequent operations
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          // Also prepare to set them on the response
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            response.cookies.set(name, value, options)
+          )
+        },
+      },
+    }
+  )
+}
+
+/**
+ * Authenticates an API request using cookies
  *
  * @param request - Next.js API request
  * @returns AuthResult with user, supabase client, and optional error response
@@ -54,35 +98,16 @@ interface AuthResult {
  * ```
  */
 export async function authenticateRequest(request: NextRequest): Promise<AuthResult> {
-  const supabase = createClient()
+  const supabase = createApiClient(request)
 
-  // Extract token from Authorization header
-  const authHeader = request.headers.get('Authorization')
-  const token = authHeader?.replace('Bearer ', '')
-
-  if (!token) {
-    return {
-      user: null,
-      supabase,
-      errorResponse: NextResponse.json(
-        {
-          error: 'Unauthorized',
-          message: 'Authentication token is required',
-        },
-        { status: 401 }
-      ),
-    }
-  }
-
-  // Verify token with Supabase
+  // Get user from session (reads from cookies)
   const {
     data: { user },
     error,
-  } = await supabase.auth.getUser(token)
+  } = await supabase.auth.getUser()
 
   if (error || !user) {
-    console.error('[api-auth] Token verification failed:', {
-      hasToken: true,
+    console.error('[api-auth] Authentication failed:', {
       error: error?.message,
     })
 
@@ -92,7 +117,7 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
       errorResponse: NextResponse.json(
         {
           error: 'Unauthorized',
-          message: 'Invalid or expired token',
+          message: 'Authentication required. Please log in.',
         },
         { status: 401 }
       ),
