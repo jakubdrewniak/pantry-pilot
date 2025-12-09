@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { CreateRecipeButton } from '@/components/recipes/CreateRecipeButton'
 import { AiRecipeGenerationButton } from '@/components/recipes/AiRecipeGenerationButton'
 import { AiRecipeGenerationModal } from '@/components/recipes/AiRecipeGenerationModal'
 import { SearchInput } from '@/components/SearchInput'
@@ -89,7 +90,8 @@ export default function RecipesListPage(): JSX.Element {
           </div>
 
           {/* Action Toolbar */}
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <CreateRecipeButton />
             <AiRecipeGenerationButton onOpen={() => setModalOpen(true)} />
           </div>
         </div>
