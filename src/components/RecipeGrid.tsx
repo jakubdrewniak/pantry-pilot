@@ -9,6 +9,7 @@ interface RecipeGridProps {
   recipes: Recipe[]
   loading: boolean
   onRecipeSelect: (id: string) => void
+  onEditRecipe: (id: string) => void
   onDeleteRecipe: (id: string) => void
 }
 
@@ -58,6 +59,7 @@ export function RecipeGrid({
   recipes,
   loading,
   onRecipeSelect,
+  onEditRecipe,
   onDeleteRecipe,
 }: RecipeGridProps): JSX.Element {
   // Show loading skeleton
@@ -77,6 +79,7 @@ export function RecipeGrid({
           key={recipe.id}
           recipe={recipe}
           onSelect={onRecipeSelect}
+          onEdit={onEditRecipe}
           onDelete={onDeleteRecipe}
         />
       ))}

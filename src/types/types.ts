@@ -315,3 +315,58 @@ export interface MarkPurchasedResponse {
   item: ShoppingListItem
   pantryItem: PantryItem
 }
+
+// ============================================================================
+// RECIPE EDITOR TYPES (View Models)
+// ============================================================================
+
+// Recipe editor mode
+export type RecipeEditorMode = 'create' | 'edit' | 'save-generated'
+
+// Form data for recipe editor (view model with temporary IDs for ingredients)
+export interface RecipeFormData {
+  title: string
+  ingredients: IngredientFormData[]
+  instructions: string
+  prepTime?: number
+  cookTime?: number
+  mealType?: 'breakfast' | 'lunch' | 'dinner'
+}
+
+// Ingredient form data with temporary ID for React keys
+export interface IngredientFormData {
+  id: string // temporary ID for React keys (crypto.randomUUID())
+  name: string
+  quantity: number
+  unit?: string
+}
+
+// Recipe form validation errors
+export interface RecipeFormErrors {
+  title?: string
+  ingredients?: string // error for entire ingredients section
+  ingredientItems?: Record<
+    string,
+    {
+      name?: string
+      quantity?: string
+    }
+  > // errors for individual ingredients, key = ingredient.id
+  instructions?: string
+  prepTime?: string
+  cookTime?: string
+  general?: string // general form error or API error
+}
+
+// Return type for useRecipeEditor hook
+export interface UseRecipeEditorReturn {
+  formData: RecipeFormData
+  errors: RecipeFormErrors
+  isSubmitting: boolean
+  isDirty: boolean
+  handleFieldChange: (field: string, value: any) => void
+  handleIngredientsChange: (ingredients: IngredientFormData[]) => void
+  handleSubmit: (e: React.FormEvent) => Promise<void>
+  validateField: (field: string) => void
+  resetForm: () => void
+}

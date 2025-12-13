@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Clock, Trash2 } from 'lucide-react'
+import { Clock, Trash2, Pencil } from 'lucide-react'
 import type { Recipe } from '@/types/types'
 
 /**
@@ -10,6 +10,7 @@ import type { Recipe } from '@/types/types'
 interface RecipeCardProps {
   recipe: Recipe
   onSelect: (id: string) => void
+  onEdit: (id: string) => void
   onDelete: (id: string) => void
 }
 
@@ -18,9 +19,9 @@ interface RecipeCardProps {
  *
  * Card displaying recipe preview with title, ingredients preview, and action buttons.
  * Shows meal type badge and creation method badge.
- * Handles click for navigation to details and delete action.
+ * Handles click for navigation to details, edit, and delete actions.
  */
-export function RecipeCard({ recipe, onSelect, onDelete }: RecipeCardProps): JSX.Element {
+export function RecipeCard({ recipe, onSelect, onEdit, onDelete }: RecipeCardProps): JSX.Element {
   // Format meal type badge
   const getMealTypeBadge = (mealType?: string): JSX.Element | null => {
     if (!mealType) return null
@@ -75,6 +76,11 @@ export function RecipeCard({ recipe, onSelect, onDelete }: RecipeCardProps): JSX
     onSelect(recipe.id)
   }
 
+  const handleEditClick = (event: React.MouseEvent): void => {
+    event.stopPropagation() // Prevent card click
+    onEdit(recipe.id)
+  }
+
   const handleDeleteClick = (event: React.MouseEvent): void => {
     event.stopPropagation() // Prevent card click
     onDelete(recipe.id)
@@ -96,15 +102,26 @@ export function RecipeCard({ recipe, onSelect, onDelete }: RecipeCardProps): JSX
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg leading-tight line-clamp-2">{recipe.title}</CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleDeleteClick}
-            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive shrink-0"
-            aria-label={`Delete recipe ${recipe.title}`}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex gap-1 shrink-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleEditClick}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+              aria-label={`Edit recipe ${recipe.title}`}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDeleteClick}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+              aria-label={`Delete recipe ${recipe.title}`}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
         <div className="flex flex-wrap gap-1 mt-2">
           {getMealTypeBadge(recipe.mealType)}

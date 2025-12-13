@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { CreateRecipeButton } from '@/components/recipes/CreateRecipeButton'
 import { AiRecipeGenerationButton } from '@/components/recipes/AiRecipeGenerationButton'
 import { AiRecipeGenerationModal } from '@/components/recipes/AiRecipeGenerationModal'
@@ -28,6 +29,7 @@ import { useRecipesList } from '@/lib/hooks/useRecipesList'
  * mealType/creationMethod from allowed enums.
  */
 export default function RecipesListPage(): JSX.Element {
+  const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
 
   const {
@@ -70,6 +72,11 @@ export default function RecipesListPage(): JSX.Element {
   const handleDeleteRecipe = (recipeId: string): void => {
     // TODO: Implement recipe deletion
     console.log('Delete recipe:', recipeId)
+  }
+
+  const handleEditRecipe = (recipeId: string): void => {
+    // Navigate to edit page using Next.js router (client-side navigation)
+    router.push(`/recipes/${recipeId}/edit`)
   }
 
   const handleRecipeSelect = (recipeId: string): void => {
@@ -117,6 +124,7 @@ export default function RecipesListPage(): JSX.Element {
             recipes={recipes}
             loading={loading}
             onRecipeSelect={handleRecipeSelect}
+            onEditRecipe={handleEditRecipe}
             onDeleteRecipe={handleDeleteRecipe}
           />
         </div>
