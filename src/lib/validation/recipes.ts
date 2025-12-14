@@ -65,6 +65,14 @@ export const CreateRecipeSchema = z.object({
       errorMap: () => ({ message: "Meal type must be 'breakfast', 'lunch', or 'dinner'" }),
     })
     .optional(),
+  creationMethod: z
+    .enum(['manual', 'ai_generated', 'ai_generated_modified'], {
+      errorMap: () => ({
+        message: "Creation method must be 'manual', 'ai_generated', or 'ai_generated_modified'",
+      }),
+    })
+    .optional()
+    .default('manual'),
 })
 
 export type GenerateRecipeRequest = z.infer<typeof GenerateRecipeRequestSchema>

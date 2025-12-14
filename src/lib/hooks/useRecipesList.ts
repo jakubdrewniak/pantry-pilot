@@ -21,6 +21,7 @@ export interface RecipesListViewModel {
   setSelectedCreationMethod: (value?: string) => void
   setCurrentPage: (page: number) => void
   setPageSize: (size: number) => void
+  refetch: () => void
 }
 
 /**
@@ -147,5 +148,6 @@ export function useRecipesList(): RecipesListViewModel {
     setSelectedCreationMethod,
     setCurrentPage,
     setPageSize,
+    refetch: fetchRecipes,
   }
 }

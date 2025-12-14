@@ -16,6 +16,7 @@ import {
   validateTime,
   validateForm,
 } from '@/lib/validation/recipe-form'
+import { RecipeApiService, RecipeApiErrorHandler } from '@/lib/services/recipe-api.service'
 
 /**
  * Custom hook for managing recipe editor form state and logic
@@ -75,7 +76,8 @@ export const useRecipeEditor = (
         }
       })
     }
-  }, []) // Run once on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Run once on mount, initialData and mode are stable
 
   /**
    * Update form data when initialData changes (e.g., after fetching recipe)
@@ -92,48 +94,6 @@ export const useRecipeEditor = (
   // ========================================================================
   // HANDLERS
   // ========================================================================
-
-  /**
-   * Handles changes to form fields (title, prepTime, cookTime, mealType, instructions)
-   */
-  const handleFieldChange = useCallback(
-    (field: string, value: any): void => {
-      setFormData(prev => ({
-        ...prev,
-        [field]: value,
-      }))
-      setIsDirty(true)
-
-      // Progressive validation: validate if field was already touched
-      if (touchedFields.has(field)) {
-        validateField(field)
-      }
-    },
-    [touchedFields]
-  )
-
-  /**
-   * Handles changes to ingredients list
-   */
-  const handleIngredientsChange = useCallback(
-    (ingredients: IngredientFormData[]): void => {
-      setFormData(prev => ({
-        ...prev,
-        ingredients,
-      }))
-      setIsDirty(true)
-
-      // Validate ingredients if section was touched
-      if (touchedFields.has('ingredients')) {
-        const ingredientsError = validateIngredients(ingredients)
-        setErrors(prev => ({
-          ...prev,
-          ingredients: ingredientsError,
-        }))
-      }
-    },
-    [touchedFields]
-  )
 
   /**
    * Validates a single field and updates errors
@@ -174,6 +134,48 @@ export const useRecipeEditor = (
   )
 
   /**
+   * Handles changes to form fields (title, prepTime, cookTime, mealType, instructions)
+   */
+  const handleFieldChange = useCallback(
+    (field: string, value: string | number | undefined): void => {
+      setFormData(prev => ({
+        ...prev,
+        [field]: value,
+      }))
+      setIsDirty(true)
+
+      // Progressive validation: validate if field was already touched
+      if (touchedFields.has(field)) {
+        validateField(field)
+      }
+    },
+    [touchedFields, validateField]
+  )
+
+  /**
+   * Handles changes to ingredients list
+   */
+  const handleIngredientsChange = useCallback(
+    (ingredients: IngredientFormData[]): void => {
+      setFormData(prev => ({
+        ...prev,
+        ingredients,
+      }))
+      setIsDirty(true)
+
+      // Validate ingredients if section was touched
+      if (touchedFields.has('ingredients')) {
+        const ingredientsError = validateIngredients(ingredients)
+        setErrors(prev => ({
+          ...prev,
+          ingredients: ingredientsError,
+        }))
+      }
+    },
+    [touchedFields]
+  )
+
+  /**
    * Handles form submission
    */
   const handleSubmit = useCallback(
@@ -203,16 +205,16 @@ export const useRecipeEditor = (
 
         if (mode === 'edit' && initialData) {
           // Update existing recipe
-          recipe = await updateRecipe(initialData.id, requestData)
+          recipe = await RecipeApiService.updateRecipe(initialData.id, requestData)
         } else {
           // Create new recipe (mode: 'create' or 'save-generated')
-          recipe = await createRecipe(requestData)
+          recipe = await RecipeApiService.createRecipe(requestData)
         }
 
         setIsDirty(false)
         onSuccess?.(recipe)
       } catch (error) {
-        handleApiError(error)
+        handleApiError(error, setErrors)
       } finally {
         setIsSubmitting(false)
       }
@@ -302,80 +304,31 @@ function convertToApiFormat(formData: RecipeFormData): CreateRecipeRequest {
 }
 
 /**
- * Creates a new recipe via API
- */
-async function createRecipe(data: CreateRecipeRequest): Promise<Recipe> {
-  const response = await fetch('/api/recipes', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new ApiError(response.status, errorData)
-  }
-
-  return response.json()
-}
-
-/**
- * Updates an existing recipe via API
- */
-async function updateRecipe(id: string, data: CreateRecipeRequest): Promise<Recipe> {
-  const response = await fetch(`/api/recipes/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(data),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new ApiError(response.status, errorData)
-  }
-
-  return response.json()
-}
-
-/**
- * Custom error class for API errors
- */
-class ApiError extends Error {
-  constructor(
-    public status: number,
-    public data: any
-  ) {
-    super(`API Error: ${status}`)
-    this.name = 'ApiError'
-  }
-}
-
-/**
  * Handles API errors and updates form errors
+ *
+ * @param error - The error from API call
+ * @param setErrors - State setter for form errors
  */
-function handleApiError(error: unknown): void {
+function handleApiError(
+  error: unknown,
+  setErrors: React.Dispatch<React.SetStateAction<RecipeFormErrors>>
+): void {
   console.error('[useRecipeEditor] API error:', error)
 
-  if (error instanceof ApiError) {
-    if (error.status === 400 && error.data.details) {
-      // Validation errors from API
-      throw error
-    } else if (error.status === 401) {
-      // Unauthorized - redirect to login
-      window.location.href = '/auth/login'
-    } else if (error.status === 404) {
-      // Recipe not found
-      throw new Error('Recipe not found')
-    } else {
-      // Generic error
-      throw new Error('An error occurred while saving the recipe')
-    }
-  } else {
-    // Network error or other unexpected error
-    throw new Error('No internet connection. Please check your connection and try again.')
+  // Check if user needs to log in
+  if (RecipeApiErrorHandler.shouldRedirectToLogin(error)) {
+    window.location.href = '/auth/login'
+    return
   }
+
+  // Try to extract validation errors from API
+  const validationErrors = RecipeApiErrorHandler.getValidationErrors(error)
+  if (validationErrors) {
+    setErrors(validationErrors)
+    return
+  }
+
+  // Set general error message
+  const userMessage = RecipeApiErrorHandler.getUserMessage(error)
+  setErrors({ general: userMessage })
 }

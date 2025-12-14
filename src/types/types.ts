@@ -176,6 +176,7 @@ export interface CreateRecipeRequest {
   prepTime?: number
   cookTime?: number
   mealType?: string
+  creationMethod?: 'manual' | 'ai_generated' | 'ai_generated_modified'
 }
 
 export type UpdateRecipeRequest = CreateRecipeRequest

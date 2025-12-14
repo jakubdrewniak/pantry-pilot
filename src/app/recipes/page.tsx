@@ -47,6 +47,7 @@ export default function RecipesListPage(): JSX.Element {
     setSelectedCreationMethod,
     setCurrentPage,
     setPageSize,
+    refetch,
   } = useRecipesList()
 
   const handleSearchChange = (value: string): void => {
@@ -82,6 +83,11 @@ export default function RecipesListPage(): JSX.Element {
   const handleRecipeSelect = (recipeId: string): void => {
     // TODO: Navigate to recipe details
     console.log('Select recipe:', recipeId)
+  }
+
+  const handleRecipeSaved = (): void => {
+    // Refresh the recipes list after saving a new recipe
+    refetch()
   }
 
   return (
@@ -150,7 +156,11 @@ export default function RecipesListPage(): JSX.Element {
         )}
 
         {/* AI Recipe Generation Modal */}
-        <AiRecipeGenerationModal open={modalOpen} onOpenChange={setModalOpen} />
+        <AiRecipeGenerationModal
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          onRecipeSaved={handleRecipeSaved}
+        />
       </div>
     </div>
   )

@@ -9,15 +9,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { AiRecipeGenerationForm } from './AiRecipeGenerationForm'
 import { LoadingState } from './LoadingState'
 import { WarningsPanel } from './WarningsPanel'
 import { RecipePreview } from './RecipePreview'
-import type { GenerateRecipeResponse, Recipe } from '@/types/types'
+import { RecipeApiService, RecipeApiErrorHandler } from '@/lib/services/recipe-api.service'
+import type { GenerateRecipeResponse, Recipe, CreateRecipeRequest } from '@/types/types'
 
 interface AiRecipeGenerationModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onRecipeSaved?: (recipe: Recipe) => void
 }
 
 /**
@@ -32,39 +35,95 @@ interface AiRecipeGenerationModalProps {
  * 2. Shows loading state during generation
  * 3. Displays warnings if any (e.g., empty pantry)
  * 4. Shows recipe preview with "AI-original" badge
+ * 5. User can save the recipe directly or edit it before saving
  *
  * Features:
  * - ARIA role="dialog" for accessibility
  * - Focus trap and ESC key support (provided by Radix Dialog)
  * - Backdrop click to close (can be prevented during loading)
  * - Responsive design (full screen on mobile, modal on desktop)
+ * - Direct save or edit generated recipe
  */
 export const AiRecipeGenerationModal = ({
   open,
   onOpenChange,
+  onRecipeSaved,
 }: AiRecipeGenerationModalProps): JSX.Element => {
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const [recipe, setRecipe] = useState<Recipe | undefined>()
   const [warnings, setWarnings] = useState<string[]>([])
   const [pantryEmpty, setPantryEmpty] = useState(false)
+  const [saveError, setSaveError] = useState<string | undefined>()
 
   const handleSuccess = (response: GenerateRecipeResponse, pantryEmptyHeader?: boolean) => {
     setIsGenerating(false)
     setRecipe(response.recipe)
     setWarnings(response.warnings || [])
     setPantryEmpty(pantryEmptyHeader || false)
+    setSaveError(undefined)
+  }
+
+  /**
+   * Saves the generated recipe to the database using RecipeApiService
+   */
+  const handleSaveRecipe = async () => {
+    if (!recipe) return
+
+    setIsSaving(true)
+    setSaveError(undefined)
+
+    try {
+      // Prepare request data - use the AI-generated recipe as-is
+      // Mark it as 'ai_generated' since it hasn't been modified
+      const requestData: CreateRecipeRequest = {
+        title: recipe.title,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions,
+        prepTime: recipe.prepTime,
+        cookTime: recipe.cookTime,
+        mealType: recipe.mealType,
+        creationMethod: 'ai_generated',
+      }
+
+      // Use RecipeApiService for consistent API communication
+      const savedRecipe = await RecipeApiService.createRecipe(requestData)
+
+      // Notify parent component that recipe was saved
+      if (onRecipeSaved) {
+        onRecipeSaved(savedRecipe)
+      }
+
+      // Close modal after successful save
+      onOpenChange(false)
+    } catch (error) {
+      console.error('Error saving recipe:', error)
+
+      // Use RecipeApiErrorHandler for consistent error messages
+      const errorMessage = RecipeApiErrorHandler.getUserMessage(error)
+      setSaveError(errorMessage)
+
+      // Redirect to login if unauthorized
+      if (RecipeApiErrorHandler.shouldRedirectToLogin(error)) {
+        setTimeout(() => {
+          window.location.href = '/auth/login'
+        }, 2000) // Give user time to see the error message
+      }
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   const handleCancel = () => {
-    // Only allow closing if not generating
-    if (!isGenerating) {
+    // Only allow closing if not generating or saving
+    if (!isGenerating && !isSaving) {
       onOpenChange(false)
     }
   }
 
   const handleClose = (newOpen: boolean) => {
-    // Prevent closing while generating
-    if (isGenerating && !newOpen) {
+    // Prevent closing while generating or saving
+    if ((isGenerating || isSaving) && !newOpen) {
       return
     }
     onOpenChange(newOpen)
@@ -75,6 +134,8 @@ export const AiRecipeGenerationModal = ({
       setWarnings([])
       setPantryEmpty(false)
       setIsGenerating(false)
+      setIsSaving(false)
+      setSaveError(undefined)
     }
   }
 
@@ -83,14 +144,14 @@ export const AiRecipeGenerationModal = ({
       <DialogContent
         className="sm:max-w-2xl max-h-[90vh] overflow-y-auto"
         onPointerDownOutside={e => {
-          // Prevent closing by clicking outside while generating
-          if (isGenerating) {
+          // Prevent closing by clicking outside while generating or saving
+          if (isGenerating || isSaving) {
             e.preventDefault()
           }
         }}
         onEscapeKeyDown={e => {
-          // Prevent ESC close while generating
-          if (isGenerating) {
+          // Prevent ESC close while generating or saving
+          if (isGenerating || isSaving) {
             e.preventDefault()
           }
         }}
@@ -118,12 +179,43 @@ export const AiRecipeGenerationModal = ({
             <WarningsPanel warnings={warnings} pantryEmpty={pantryEmpty} />
             <RecipePreview recipe={recipe} />
 
+            {/* Show save error if any */}
+            {saveError && (
+              <div
+                className="p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md"
+                role="alert"
+              >
+                <p className="font-medium">Failed to save recipe</p>
+                <p className="mt-1">{saveError}</p>
+              </div>
+            )}
+
             {/* Actions after generation */}
             <div className="flex justify-end gap-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isSaving}
+              >
                 Close
               </Button>
-              {/* TODO: Add "Save Recipe" and "Edit Recipe" buttons in future implementation */}
+              <Button
+                type="button"
+                onClick={handleSaveRecipe}
+                disabled={isSaving}
+                className="min-w-[120px]"
+              >
+                {isSaving ? (
+                  <>
+                    <Spinner className="mr-2 h-4 w-4" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Recipe'
+                )}
+              </Button>
+              {/* TODO: Add "Edit Recipe" button in future implementation */}
             </div>
           </div>
         )}
