@@ -83,7 +83,7 @@ export const useRecipeEditor = (
    * Update form data when initialData changes (e.g., after fetching recipe)
    */
   useEffect(() => {
-    if (initialData && mode === 'edit') {
+    if (initialData && (mode === 'edit' || mode === 'save-generated')) {
       setFormData(convertFromApiFormat(initialData))
       setIsDirty(false)
       setTouchedFields(new Set())
@@ -198,8 +198,8 @@ export const useRecipeEditor = (
       setErrors({})
 
       try {
-        // Convert form data to API format
-        const requestData = convertToApiFormat(formData)
+        // Convert form data to API format (includes creationMethod logic)
+        const requestData = convertToApiFormat(formData, mode)
 
         let recipe: Recipe
 
@@ -290,9 +290,17 @@ function convertFromApiFormat(recipe: Recipe): RecipeFormData {
 
 /**
  * Converts RecipeFormData (view model) to CreateRecipeRequest (API format)
- * Removes temporary IDs from ingredients
+ * Removes temporary IDs from ingredients and sets appropriate creationMethod
  */
-function convertToApiFormat(formData: RecipeFormData): CreateRecipeRequest {
+function convertToApiFormat(formData: RecipeFormData, mode: RecipeEditorMode): CreateRecipeRequest {
+  // Determine creation method based on mode
+  let creationMethod: 'manual' | 'ai_generated' | 'ai_generated_modified' = 'manual'
+
+  if (mode === 'save-generated') {
+    // When editing an AI-generated recipe, mark as modified
+    creationMethod = 'ai_generated_modified'
+  }
+
   return {
     title: formData.title,
     ingredients: formData.ingredients.map(({ id: _id, ...ingredient }): Ingredient => ingredient),
@@ -300,6 +308,7 @@ function convertToApiFormat(formData: RecipeFormData): CreateRecipeRequest {
     prepTime: formData.prepTime,
     cookTime: formData.cookTime,
     mealType: formData.mealType,
+    creationMethod,
   }
 }
 

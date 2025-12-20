@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   Dialog,
   DialogContent,
@@ -52,6 +53,7 @@ export const AiRecipeGenerationModal = ({
   const [isGenerating, setIsGenerating] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [recipe, setRecipe] = useState<Recipe | undefined>()
+  const router = useRouter()
   const [warnings, setWarnings] = useState<string[]>([])
   const [pantryEmpty, setPantryEmpty] = useState(false)
   const [saveError, setSaveError] = useState<string | undefined>()
@@ -67,6 +69,27 @@ export const AiRecipeGenerationModal = ({
   /**
    * Saves the generated recipe to the database using RecipeApiService
    */
+  /**
+   * Opens the recipe editor to edit the generated recipe
+   * This will create a recipe marked as 'ai_generated_modified' when saved
+   */
+  const handleEditRecipe = () => {
+    if (!recipe) return
+
+    // Close the modal
+    onOpenChange(false)
+
+    // Store the AI-generated recipe in localStorage for the edit page
+    const editData = {
+      aiGeneratedRecipe: recipe,
+      timestamp: Date.now(), // For cleanup
+    }
+    localStorage.setItem('aiRecipeToEdit', JSON.stringify(editData))
+
+    // Navigate to new recipe page with special mode
+    router.push('/recipes/new?mode=edit-ai-generated')
+  }
+
   const handleSaveRecipe = async () => {
     if (!recipe) return
 
@@ -202,6 +225,14 @@ export const AiRecipeGenerationModal = ({
               </Button>
               <Button
                 type="button"
+                variant="outline"
+                onClick={handleEditRecipe}
+                disabled={isSaving}
+              >
+                Edit Recipe
+              </Button>
+              <Button
+                type="button"
                 onClick={handleSaveRecipe}
                 disabled={isSaving}
                 className="min-w-[120px]"
@@ -215,7 +246,6 @@ export const AiRecipeGenerationModal = ({
                   'Save Recipe'
                 )}
               </Button>
-              {/* TODO: Add "Edit Recipe" button in future implementation */}
             </div>
           </div>
         )}
