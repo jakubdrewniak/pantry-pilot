@@ -87,6 +87,7 @@ export const MarkdownInstructionsEditor = ({
       <div className={cn('grid gap-4', showPreview ? 'lg:grid-cols-2' : 'grid-cols-1')}>
         {/* Textarea */}
         <div className="space-y-2">
+          <div className="text-sm font-medium text-muted-foreground">Edit</div>
           <textarea
             id="recipe-instructions"
             name="instructions"
