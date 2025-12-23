@@ -39,7 +39,7 @@ export class RecipesPage {
     this.page = page
 
     // Page elements
-    this.pageHeading = page.getByRole('heading', { name: 'Recipes' })
+    this.pageHeading = page.locator('h1', { hasText: 'Recipes' })
     this.aiGenerateButton = page.getByTestId('ai-generate-button')
     this.recipesGrid = page.getByTestId('recipes-grid')
     this.recipeCards = page.getByTestId('recipe-card')
