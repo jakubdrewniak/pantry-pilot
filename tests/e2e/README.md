@@ -4,6 +4,26 @@
 
 This directory contains end-to-end (E2E) tests using Playwright. E2E tests verify critical user journeys by simulating real user interactions with the application.
 
+## Prerequisites
+
+### Test User Setup
+
+E2E tests require a test user account. Configure credentials in `.env.test`:
+
+```bash
+# .env.test
+E2E_USERNAME=your-test-user@example.com
+E2E_PASSWORD=YourSecurePassword123!
+E2E_USERNAME_ID=optional-user-id
+```
+
+**Important:**
+
+- ⚠️ Never commit `.env.test` to version control (already in `.gitignore`)
+- 🔒 Use a dedicated test user, not production credentials
+- ✅ Create test user in your Supabase instance before running tests
+- 📝 Test user should have permission to create/edit recipes
+
 ## Quick Start
 
 ### Installation
@@ -49,13 +69,30 @@ npx playwright test --project=chromium
 
 ```
 tests/e2e/
-├── README.md                           # This file
-├── auth-login.spec.ts                  # Login page tests
+├── README.md                              # This file
+├── QUICKSTART.md                          # Quick start guide 🚀
+├── AUTH-SETUP-GUIDE.md                    # Authentication setup explained
+├── README-AI-GENERATION-TESTS.md          # Detailed guide for AI recipe tests
+├── AI-GENERATION-FLOW-DIAGRAM.md          # Visual flow diagram
+├── auth-helper.spec.ts                    # Authentication helper tests ⚡
+├── auth-login.spec.ts                     # Login page tests
+├── recipes-ai-generation.spec.ts          # AI recipe generation (direct)
+├── recipes-ai-generation-pom.spec.ts      # AI recipe generation (Page Object) ⭐
 └── helpers/
-    ├── test-data.ts                    # Test data generators
+    ├── index.ts                           # Central export point
+    ├── auth.ts                            # Authentication helpers 🔐
+    ├── test-data.ts                       # Test data generators
     └── page-objects/
-        └── LoginPage.ts                # Login page object
+        ├── LoginPage.ts                   # Login page object
+        └── RecipesPage.ts                 # Recipes page object
+
+Legend:
+⚡ - Run this first to verify setup
+⭐ - Recommended for production use
+🔐 - New authentication utilities
 ```
+
+**Quick Start:** See `QUICKSTART.md` for step-by-step instructions!
 
 ## Writing Tests
 
@@ -140,7 +177,23 @@ Priority order:
 1. `getByRole()` - Best for accessibility
 2. `getByLabel()` - Good for form fields
 3. `getByPlaceholder()` - Fallback for inputs
-4. `getByTestId()` - Last resort (add data-testid attributes)
+4. `getByTestId()` - Explicit test target (add data-testid attributes)
+
+**When to use `data-testid`:**
+
+- Element changes frequently (styling, text)
+- No semantic role available
+- Explicit test targeting needed
+
+Example:
+
+```typescript
+// Component
+<Button data-testid="submit-recipe">Save</Button>
+
+// Test
+await page.getByTestId('submit-recipe').click()
+```
 
 ### 3. Wait for Elements Properly
 
@@ -278,12 +331,29 @@ For development, tests run against your local Supabase instance. For CI, conside
 
 ## Next Steps
 
-Consider adding E2E tests for:
+### Completed ✅
 
-- Login flow with interactions
-- Registration flow
-- Password reset
-- Pantry CRUD operations
-- Recipe generation
-- Shopping list management
-- Real-time collaboration
+- [x] Login flow with interactions
+- [x] AI recipe generation (full flow)
+- [x] Recipe list display and verification
+- [x] Page Object Model for RecipesPage
+
+### Consider adding E2E tests for:
+
+- [ ] Registration flow
+- [ ] Password reset
+- [ ] Pantry CRUD operations
+- [ ] Recipe editing flow
+- [ ] Recipe deletion with confirmation
+- [ ] Shopping list management
+- [ ] Real-time collaboration
+- [ ] Search and filtering
+- [ ] Pagination controls
+
+### Test Infrastructure
+
+- [ ] Authentication helper setup
+- [ ] Test database cleanup utilities
+- [ ] API mocking for faster tests
+- [ ] Visual regression testing
+- [ ] CI/CD pipeline integration

@@ -200,6 +200,7 @@ Pantry Pilot uses a comprehensive testing strategy to ensure reliability and pre
 - Cross-browser compatibility (Chromium, Firefox, WebKit)
 - Real-time collaboration features
 - Multi-step workflows
+- **Automatic database cleanup** after all tests (global teardown)
 
 ### Testing Philosophy
 
@@ -212,21 +213,32 @@ Pantry Pilot uses a comprehensive testing strategy to ensure reliability and pre
 
 ```
 tests/
-├── unit/              # Vitest unit tests
-│   ├── components/
-│   ├── hooks/
-│   └── lib/
-├── integration/       # API integration tests
-│   └── api/
 ├── e2e/               # Playwright E2E tests
-│   ├── auth.spec.ts
-│   ├── pantry.spec.ts
-│   └── recipes.spec.ts
-└── helpers/           # Test utilities & mocks
-    ├── mocks/
-    ├── fixtures/
-    └── factories.ts
+│   ├── auth-login.spec.ts
+│   ├── recipes-ai-generation.spec.ts
+│   └── helpers/       # Test utilities & page objects
+├── teardown/          # Global teardown for database cleanup
+│   ├── global-teardown.ts
+│   ├── test-teardown.ts
+│   └── README.md
+└── setup/             # Test setup & configuration
+    └── vitest.setup.ts
 ```
+
+### Running Tests
+
+```bash
+# Unit tests (watch mode)
+npm test
+
+# E2E tests (with automatic cleanup)
+npm run test:e2e
+
+# Manual database cleanup
+npm run test:e2e:cleanup
+```
+
+> **Note**: E2E tests automatically clean up test data after completion. See [tests/teardown/README.md](./tests/teardown/README.md) for setup.
 
 ## 🔧 Configuration Files
 

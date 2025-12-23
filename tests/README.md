@@ -1,6 +1,10 @@
-# Unit Testing Guide
+# Testing Guide
+
+This directory contains both **unit tests** (Vitest) and **E2E tests** (Playwright).
 
 ## Quick Start
+
+### Unit Tests (Vitest)
 
 ```bash
 # Run tests (watch mode)
@@ -15,6 +19,24 @@ npm run test:coverage
 # Interactive UI
 npm run test:ui
 ```
+
+### E2E Tests (Playwright)
+
+```bash
+# Run all E2E tests (includes automatic cleanup)
+npm run test:e2e
+
+# Run specific test file
+npx playwright test recipes-ai-generation.spec.ts
+
+# Run in headed mode (see browser)
+npx playwright test --headed
+
+# Manual database cleanup (if needed)
+npx tsx tests/teardown/test-teardown.ts
+```
+
+> **Note**: E2E tests automatically clean up test data after completion using global teardown. See `tests/teardown/README.md` for details.
 
 ## Test Structure
 
@@ -167,9 +189,17 @@ See `src/components/auth/LoginForm.test.tsx`:
 
 ## Resources
 
+### Unit Testing
+
 - [Vitest Docs](https://vitest.dev/)
 - [Testing Library](https://testing-library.com/react)
 - Example: `src/lib/validation/auth.test.ts`
+
+### E2E Testing
+
+- [Playwright Docs](https://playwright.dev/)
+- [Global Teardown Guide](./teardown/README.md)
+- [E2E Test Examples](./e2e/)
 
 ---
 

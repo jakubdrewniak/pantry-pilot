@@ -19,15 +19,19 @@ dotenv.config({ path: path.resolve(__dirname, '.env.test') })
  * - Trace recording for debugging
  * - Parallel test execution
  * - Test user credentials from .env.test
+ * - Global teardown for database cleanup
  *
  * Required environment variables in .env.test:
  * - E2E_USERNAME (test user email)
  * - E2E_PASSWORD (test user password)
- * - E2E_USERNAME_ID (optional, test user ID)
+ * - E2E_USERNAME_ID (test user ID for cleanup)
+ * - SUPABASE_SERVICE_ROLE_KEY (admin key for teardown)
  *
  * See https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
+  // Global teardown - runs AFTER all tests complete
+  globalTeardown: './tests/teardown/global-teardown.ts',
   // Test directory
   testDir: './tests/e2e',
 
