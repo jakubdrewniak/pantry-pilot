@@ -20,7 +20,7 @@ interface RecipeGridProps {
  */
 function LoadingSkeleton(): JSX.Element {
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="recipes-loading-skeleton">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {Array.from({ length: 6 }).map((_, index) => (
           <div key={index} className="space-y-3">
@@ -39,7 +39,10 @@ function LoadingSkeleton(): JSX.Element {
  */
 function EmptyState(): JSX.Element {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
+    <div
+      className="flex flex-col items-center justify-center py-12 text-center"
+      data-testid="recipes-empty-state"
+    >
       <div className="text-6xl mb-4">🍽️</div>
       <h3 className="text-lg font-semibold mb-2">No recipes found</h3>
       <p className="text-sm text-muted-foreground max-w-md">
@@ -73,7 +76,10 @@ export function RecipeGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div
+      className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+      data-testid="recipes-grid"
+    >
       {recipes.map(recipe => (
         <RecipeCard
           key={recipe.id}

@@ -1,4 +1,13 @@
 import { defineConfig, devices } from '@playwright/test'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
+import { fileURLToPath } from 'url'
+import { dirname } from 'path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+// Load test environment variables from .env.test
+dotenv.config({ path: path.resolve(__dirname, '.env.test') })
 
 /**
  * Playwright E2E Testing Configuration
@@ -9,6 +18,12 @@ import { defineConfig, devices } from '@playwright/test'
  * - Screenshots and videos on failure
  * - Trace recording for debugging
  * - Parallel test execution
+ * - Test user credentials from .env.test
+ *
+ * Required environment variables in .env.test:
+ * - E2E_USERNAME (test user email)
+ * - E2E_PASSWORD (test user password)
+ * - E2E_USERNAME_ID (optional, test user ID)
  *
  * See https://playwright.dev/docs/test-configuration
  */

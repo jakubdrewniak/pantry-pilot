@@ -36,10 +36,10 @@ export const RecipePreview = ({ recipe }: RecipePreviewProps): JSX.Element | nul
       : recipe.instructions
 
   return (
-    <Card role="article" aria-label="Generated recipe preview">
+    <Card role="article" aria-label="Generated recipe preview" data-testid="ai-recipe-preview">
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle>{recipe.title}</CardTitle>
+          <CardTitle data-testid="ai-recipe-preview-title">{recipe.title}</CardTitle>
           <Badge variant="secondary" aria-label="AI generated recipe">
             AI-original
           </Badge>

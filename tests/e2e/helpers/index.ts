@@ -5,6 +5,16 @@
  * Import from this file to keep imports clean and organized.
  */
 
+// Authentication helpers
+export {
+  loginAsTestUser,
+  loginWithCredentials,
+  isAuthenticated,
+  logout,
+  getTestUserCredentials,
+  type TestUser as AuthTestUser,
+} from './auth'
+
 // Test data generators
 export {
   generateTestEmail,
@@ -17,3 +27,4 @@ export {
 
 // Page objects
 export { LoginPage } from './page-objects/LoginPage'
+export { RecipesPage } from './page-objects/RecipesPage'

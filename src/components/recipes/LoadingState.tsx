@@ -22,6 +22,7 @@ export const LoadingState = ({ loading }: LoadingStateProps): JSX.Element | null
       role="status"
       aria-live="polite"
       aria-busy="true"
+      data-testid="ai-recipe-loading-state"
     >
       <Spinner size="lg" />
       <p className="text-sm text-muted-foreground">Generating your recipe...</p>

@@ -58,12 +58,21 @@ export const AiRecipeGenerationModal = ({
   const [pantryEmpty, setPantryEmpty] = useState(false)
   const [saveError, setSaveError] = useState<string | undefined>()
 
+  const handleGenerationStart = () => {
+    setIsGenerating(true)
+    setSaveError(undefined)
+  }
+
   const handleSuccess = (response: GenerateRecipeResponse, pantryEmptyHeader?: boolean) => {
     setIsGenerating(false)
     setRecipe(response.recipe)
     setWarnings(response.warnings || [])
     setPantryEmpty(pantryEmptyHeader || false)
     setSaveError(undefined)
+  }
+
+  const handleError = () => {
+    setIsGenerating(false)
   }
 
   /**
@@ -178,6 +187,7 @@ export const AiRecipeGenerationModal = ({
             e.preventDefault()
           }
         }}
+        data-testid="ai-recipe-generation-modal"
       >
         <DialogHeader>
           <DialogTitle>Generate Recipe with AI</DialogTitle>
@@ -191,7 +201,12 @@ export const AiRecipeGenerationModal = ({
           <>
             <LoadingState loading={isGenerating} />
             {!isGenerating && (
-              <AiRecipeGenerationForm onSuccess={handleSuccess} onCancel={handleCancel} />
+              <AiRecipeGenerationForm
+                onStart={handleGenerationStart}
+                onSuccess={handleSuccess}
+                onError={handleError}
+                onCancel={handleCancel}
+              />
             )}
           </>
         )}
@@ -207,6 +222,7 @@ export const AiRecipeGenerationModal = ({
               <div
                 className="p-4 text-sm text-red-800 bg-red-50 border border-red-200 rounded-md"
                 role="alert"
+                data-testid="ai-recipe-save-error"
               >
                 <p className="font-medium">Failed to save recipe</p>
                 <p className="mt-1">{saveError}</p>
@@ -220,6 +236,7 @@ export const AiRecipeGenerationModal = ({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isSaving}
+                data-testid="ai-recipe-close-button"
               >
                 Close
               </Button>
@@ -228,6 +245,7 @@ export const AiRecipeGenerationModal = ({
                 variant="outline"
                 onClick={handleEditRecipe}
                 disabled={isSaving}
+                data-testid="ai-recipe-edit-button"
               >
                 Edit Recipe
               </Button>
@@ -236,6 +254,7 @@ export const AiRecipeGenerationModal = ({
                 onClick={handleSaveRecipe}
                 disabled={isSaving}
                 className="min-w-[120px]"
+                data-testid="ai-recipe-save-button"
               >
                 {isSaving ? (
                   <>

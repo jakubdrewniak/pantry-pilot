@@ -23,7 +23,7 @@ interface AiRecipeGenerationButtonProps {
  */
 export const AiRecipeGenerationButton: React.FC<AiRecipeGenerationButtonProps> = ({ onOpen }) => {
   return (
-    <Button onClick={onOpen} className="gap-2">
+    <Button onClick={onOpen} className="gap-2" data-testid="ai-generate-button">
       <Sparkles className="h-4 w-4" aria-hidden="true" />
       Generate with AI
     </Button>

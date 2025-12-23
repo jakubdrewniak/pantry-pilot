@@ -57,7 +57,7 @@ export const IngredientItem = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" data-testid={`ingredient-item-${ingredient.id}`}>
       {/* Grid layout for ingredient fields */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
         {/* Name input */}

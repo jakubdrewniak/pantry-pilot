@@ -106,6 +106,7 @@ export const MarkdownInstructionsEditor = ({
             )}
             aria-invalid={!!error}
             aria-describedby={error ? 'instructions-error' : undefined}
+            data-testid="recipe-editor-instructions"
             required
           />
         </div>

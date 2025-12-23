@@ -106,7 +106,7 @@ export const IngredientsEditor = ({
       </div>
 
       {/* List of ingredients */}
-      <div className="space-y-3">
+      <div className="space-y-3" data-testid="recipe-editor-ingredients-list">
         {ingredients.map(ingredient => (
           <IngredientItem
             key={ingredient.id}

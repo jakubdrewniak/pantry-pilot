@@ -83,6 +83,7 @@ export const RecipeMetadataSection = ({
           className={cn(errors.title && 'border-destructive')}
           aria-invalid={!!errors.title}
           aria-describedby={errors.title ? 'title-error' : undefined}
+          data-testid="recipe-editor-title"
           required
         />
         {errors.title && (

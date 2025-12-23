@@ -98,10 +98,14 @@ export function RecipeCard({ recipe, onSelect, onEdit, onDelete }: RecipeCardPro
           handleCardClick()
         }
       }}
+      data-testid="recipe-card"
+      data-recipe-id={recipe.id}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg leading-tight line-clamp-2">{recipe.title}</CardTitle>
+          <CardTitle className="text-lg leading-tight line-clamp-2" data-testid="recipe-card-title">
+            {recipe.title}
+          </CardTitle>
           <div className="flex gap-1 shrink-0">
             <Button
               variant="ghost"
@@ -109,6 +113,7 @@ export function RecipeCard({ recipe, onSelect, onEdit, onDelete }: RecipeCardPro
               onClick={handleEditClick}
               className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
               aria-label={`Edit recipe ${recipe.title}`}
+              data-testid="recipe-card-edit-button"
             >
               <Pencil className="h-4 w-4" />
             </Button>
@@ -118,6 +123,7 @@ export function RecipeCard({ recipe, onSelect, onEdit, onDelete }: RecipeCardPro
               onClick={handleDeleteClick}
               className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
               aria-label={`Delete recipe ${recipe.title}`}
+              data-testid="recipe-card-delete-button"
             >
               <Trash2 className="h-4 w-4" />
             </Button>

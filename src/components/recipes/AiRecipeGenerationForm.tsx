@@ -9,7 +9,9 @@ import { useAiRecipeGeneration } from '@/lib/hooks/useAiRecipeGeneration'
 import type { GenerateRecipeResponse } from '@/types/types'
 
 interface AiRecipeGenerationFormProps {
+  onStart: () => void
   onSuccess: (response: GenerateRecipeResponse, pantryEmpty?: boolean) => void
+  onError: () => void
   onCancel: () => void
 }
 
@@ -24,11 +26,15 @@ interface AiRecipeGenerationFormProps {
  * - Displays inline errors
  *
  * Props:
+ * - onStart: Called when generation starts
  * - onSuccess: Called with response when generation succeeds
+ * - onError: Called when generation fails
  * - onCancel: Called when user clicks cancel
  */
 export const AiRecipeGenerationForm = ({
+  onStart,
   onSuccess,
+  onError,
   onCancel,
 }: AiRecipeGenerationFormProps): JSX.Element => {
   const [hint, setHint] = useState('')
@@ -71,10 +77,16 @@ export const AiRecipeGenerationForm = ({
       return
     }
 
+    // Notify parent that generation is starting
+    onStart()
+
     const result = await generate({ hint, usePantryItems })
 
     if (result.data) {
       onSuccess(result.data, result.pantryEmptyHeader)
+    } else {
+      // Notify parent that generation failed
+      onError()
     }
     // Errors are handled by the hook and displayed below
   }
@@ -98,6 +110,7 @@ export const AiRecipeGenerationForm = ({
           rows={3}
           aria-describedby="hint-description"
           aria-invalid={!!errorMessage}
+          data-testid="ai-recipe-hint-input"
         />
         <p id="hint-description" className="text-xs text-muted-foreground">
           Describe what kind of recipe you&apos;d like. {hint.length}/200 characters.
@@ -111,6 +124,7 @@ export const AiRecipeGenerationForm = ({
           checked={usePantryItems}
           onCheckedChange={checked => setUsePantryItems(checked === true)}
           disabled={isLoading}
+          data-testid="ai-recipe-use-pantry-checkbox"
         />
         <Label htmlFor="usePantryItems" className="text-sm font-normal cursor-pointer">
           Use ingredients from my pantry
@@ -119,7 +133,12 @@ export const AiRecipeGenerationForm = ({
 
       {/* Error Display */}
       {errorMessage && (
-        <Alert variant="destructive" role="alert" aria-live="assertive">
+        <Alert
+          variant="destructive"
+          role="alert"
+          aria-live="assertive"
+          data-testid="ai-recipe-error"
+        >
           <AlertCircle className="h-4 w-4" aria-hidden="true" />
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
@@ -127,10 +146,16 @@ export const AiRecipeGenerationForm = ({
 
       {/* Action Buttons */}
       <div className="flex justify-end gap-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isLoading}
+          data-testid="ai-recipe-cancel-button"
+        >
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} data-testid="ai-recipe-generate-button">
           {isLoading ? 'Generating...' : 'Generate Recipe'}
         </Button>
       </div>
