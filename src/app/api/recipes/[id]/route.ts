@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { authenticateRequest } from '@/lib/api-auth'
 import { RecipeService } from '@/lib/services/recipe.service'
 import { CreateRecipeSchema } from '@/lib/validation/recipes'
 import type { GetRecipeResponse, UpdateRecipeResponse } from '@/types/types'
+import type { Database } from '@/db/database.types'
 
 // UUID v4 validation regex
 // This validates the format before passing to database to prevent injection
@@ -47,7 +49,7 @@ function isValidUUID(id: string): boolean {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<GetRecipeResponse | { error: string; message?: string }>> {
   try {
     // ========================================================================
@@ -62,7 +64,8 @@ export async function GET(
     // 2. VALIDATE PATH PARAMETER
     // ========================================================================
 
-    const recipeId = params.id
+    // In Next.js 15, params is a Promise and must be awaited
+    const { id: recipeId } = await params
 
     // Validate UUID format before database query
     // This prevents potential SQL injection and provides better error messages
@@ -80,7 +83,9 @@ export async function GET(
     // 3. BUSINESS LOGIC - FETCH RECIPE
     // ========================================================================
 
-    const recipeService = new RecipeService(supabase)
+    // Cast server client to generic SupabaseClient for service layer compatibility
+    // Server client from @supabase/ssr and generic client are compatible at runtime
+    const recipeService = new RecipeService(supabase as unknown as SupabaseClient<Database>)
 
     let recipe: GetRecipeResponse
     try {
@@ -170,7 +175,7 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<
   NextResponse<UpdateRecipeResponse | { error: string; message?: string; details?: unknown }>
 > {
@@ -187,7 +192,8 @@ export async function PUT(
     // 2. VALIDATE PATH PARAMETER
     // ========================================================================
 
-    const recipeId = params.id
+    // In Next.js 15, params is a Promise and must be awaited
+    const { id: recipeId } = await params
 
     // Validate UUID format before proceeding
     if (!isValidUUID(recipeId)) {
@@ -241,7 +247,9 @@ export async function PUT(
     // 4. BUSINESS LOGIC - UPDATE RECIPE
     // ========================================================================
 
-    const recipeService = new RecipeService(supabase)
+    // Cast server client to generic SupabaseClient for service layer compatibility
+    // Server client from @supabase/ssr and generic client are compatible at runtime
+    const recipeService = new RecipeService(supabase as unknown as SupabaseClient<Database>)
 
     let recipe: UpdateRecipeResponse
     try {
@@ -330,7 +338,7 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse<void | { error: string; message?: string }>> {
   try {
     // ========================================================================
@@ -345,7 +353,8 @@ export async function DELETE(
     // 2. VALIDATE PATH PARAMETER
     // ========================================================================
 
-    const recipeId = params.id
+    // In Next.js 15, params is a Promise and must be awaited
+    const { id: recipeId } = await params
 
     // Validate UUID format before proceeding
     if (!isValidUUID(recipeId)) {
@@ -362,7 +371,9 @@ export async function DELETE(
     // 3. BUSINESS LOGIC - DELETE RECIPE
     // ========================================================================
 
-    const recipeService = new RecipeService(supabase)
+    // Cast server client to generic SupabaseClient for service layer compatibility
+    // Server client from @supabase/ssr and generic client are compatible at runtime
+    const recipeService = new RecipeService(supabase as unknown as SupabaseClient<Database>)
 
     try {
       // RecipeService handles:

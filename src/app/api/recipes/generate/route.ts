@@ -48,7 +48,7 @@ export async function POST(
   try {
     // 1. Authentication
     const { errorResponse } = await authenticateRequest(request)
-    if (errorResponse) return errorResponse
+    if (errorResponse) return errorResponse as NextResponse<{ error: string }>
     // Note: user is available from authenticateRequest but not used yet
     // TODO: Use user.id when saving to database
 

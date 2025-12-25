@@ -14,6 +14,8 @@ import type {
   RecipesListResponse,
   BulkDeleteRecipesResponse,
 } from '@/types/types'
+import { Database } from '@/db/database.types'
+import { SupabaseClient } from '@supabase/supabase-js'
 
 // UUID v4 validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -110,7 +112,7 @@ export async function POST(
     // 3. BUSINESS LOGIC - CREATE RECIPE
     // ========================================================================
 
-    const recipeService = new RecipeService(supabase)
+    const recipeService = new RecipeService(supabase as unknown as SupabaseClient<Database>)
     const recipe = await recipeService.createRecipe(user!.id, validatedInput)
 
     // ========================================================================
@@ -231,7 +233,7 @@ export async function GET(
     // 4. BUSINESS LOGIC - LIST RECIPES
     // ========================================================================
 
-    const recipeService = new RecipeService(supabase)
+    const recipeService = new RecipeService(supabase as unknown as SupabaseClient<Database>)
     const result = await recipeService.listRecipes(user!.id, filters)
 
     // ========================================================================
@@ -390,7 +392,7 @@ export async function DELETE(
     // 4. BUSINESS LOGIC - BULK DELETE RECIPES
     // ========================================================================
 
-    const recipeService = new RecipeService(supabase)
+    const recipeService = new RecipeService(supabase as unknown as SupabaseClient<Database>)
 
     // bulkDeleteRecipes never throws - it returns results for all IDs
     const result = await recipeService.bulkDeleteRecipes(user!.id, ids)
