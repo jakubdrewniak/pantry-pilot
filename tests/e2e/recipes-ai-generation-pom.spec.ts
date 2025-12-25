@@ -71,7 +71,6 @@ test.describe('AI Recipe Generation (POM)', () => {
     // Verify loading state appears
     await expect(recipesPage.loadingState).toBeVisible()
     await expect(recipesPage.page.getByText('Generating your recipe...')).toBeVisible()
-    await expect(recipesPage.page.getByText('NON EXISTING')).toBeVisible()
 
     // Wait for completion
     await recipesPage.waitForRecipeGeneration()
