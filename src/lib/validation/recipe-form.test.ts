@@ -71,7 +71,7 @@ describe('Recipe Form Validation', () => {
         const error = validateTitle(title)
 
         // Assert
-        expect(error).toBe('Tytuł jest wymagany')
+        expect(error).toBe('Title is required')
       })
 
       it('should reject title with less than 3 characters', () => {
@@ -82,7 +82,7 @@ describe('Recipe Form Validation', () => {
         const error = validateTitle(title)
 
         // Assert
-        expect(error).toBe('Tytuł musi mieć minimum 3 znaki')
+        expect(error).toBe('Title must be at least 3 characters')
       })
 
       it('should reject title with more than 100 characters', () => {
@@ -93,7 +93,7 @@ describe('Recipe Form Validation', () => {
         const error = validateTitle(title)
 
         // Assert
-        expect(error).toBe('Tytuł może mieć maksymalnie 100 znaków')
+        expect(error).toBe('Title must be at most 100 characters')
       })
     })
   })
@@ -163,7 +163,7 @@ describe('Recipe Form Validation', () => {
 
         // Assert
         expect(errors).toBeDefined()
-        expect(errors?.name).toBe('Nazwa składnika jest wymagana')
+        expect(errors?.name).toBe('Ingredient name is required')
       })
 
       it('should reject ingredient with zero quantity', () => {
@@ -180,7 +180,7 @@ describe('Recipe Form Validation', () => {
 
         // Assert
         expect(errors).toBeDefined()
-        expect(errors?.quantity).toBe('Ilość musi być większa od 0')
+        expect(errors?.quantity).toBe('Quantity must be greater than 0')
       })
 
       it('should reject ingredient with negative quantity', () => {
@@ -197,7 +197,7 @@ describe('Recipe Form Validation', () => {
 
         // Assert
         expect(errors).toBeDefined()
-        expect(errors?.quantity).toBe('Ilość musi być większa od 0')
+        expect(errors?.quantity).toBe('Quantity must be greater than 0')
       })
 
       it('should reject ingredient with multiple errors', () => {
@@ -279,7 +279,7 @@ describe('Recipe Form Validation', () => {
         const error = validateIngredients(ingredients)
 
         // Assert
-        expect(error).toBe('Przepis musi zawierać przynajmniej jeden składnik')
+        expect(error).toBe('Recipe must contain at least one ingredient')
       })
     })
   })
@@ -324,7 +324,7 @@ describe('Recipe Form Validation', () => {
         const error = validateInstructions(instructions)
 
         // Assert
-        expect(error).toBe('Instrukcje są wymagane')
+        expect(error).toBe('Instructions are required')
       })
 
       it('should reject whitespace-only instructions', () => {
@@ -335,7 +335,7 @@ describe('Recipe Form Validation', () => {
         const error = validateInstructions(instructions)
 
         // Assert
-        expect(error).toBe('Instrukcje są wymagane')
+        expect(error).toBe('Instructions are required')
       })
     })
   })
@@ -385,7 +385,7 @@ describe('Recipe Form Validation', () => {
         const error = validateTime(time)
 
         // Assert
-        expect(error).toBe('Czas nie może być ujemny')
+        expect(error).toBe('Time cannot be negative')
       })
 
       it('should reject fractional time', () => {
@@ -396,7 +396,7 @@ describe('Recipe Form Validation', () => {
         const error = validateTime(time)
 
         // Assert
-        expect(error).toBe('Czas musi być liczbą całkowitą')
+        expect(error).toBe('Time must be an integer')
       })
     })
   })
