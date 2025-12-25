@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Clock, Trash2, Pencil } from 'lucide-react'
 import type { Recipe } from '@/types/types'
 
@@ -9,7 +10,9 @@ import type { Recipe } from '@/types/types'
  */
 interface RecipeCardProps {
   recipe: Recipe
+  isSelected: boolean
   onSelect: (id: string) => void
+  onToggle: (id: string) => void
   onEdit: (id: string) => void
   onDelete: (id: string) => void
 }
@@ -19,9 +22,17 @@ interface RecipeCardProps {
  *
  * Card displaying recipe preview with title, ingredients preview, and action buttons.
  * Shows meal type badge and creation method badge.
+ * Includes checkbox for multi-selection functionality.
  * Handles click for navigation to details, edit, and delete actions.
  */
-export function RecipeCard({ recipe, onSelect, onEdit, onDelete }: RecipeCardProps): JSX.Element {
+export function RecipeCard({
+  recipe,
+  isSelected,
+  onSelect,
+  onToggle,
+  onEdit,
+  onDelete,
+}: RecipeCardProps): JSX.Element {
   // Format meal type badge
   const getMealTypeBadge = (mealType?: string): JSX.Element | null => {
     if (!mealType) return null
@@ -76,6 +87,11 @@ export function RecipeCard({ recipe, onSelect, onEdit, onDelete }: RecipeCardPro
     onSelect(recipe.id)
   }
 
+  const handleCheckboxChange = (event: React.MouseEvent): void => {
+    event.stopPropagation() // Prevent card click
+    onToggle(recipe.id)
+  }
+
   const handleEditClick = (event: React.MouseEvent): void => {
     event.stopPropagation() // Prevent card click
     onEdit(recipe.id)
@@ -88,7 +104,9 @@ export function RecipeCard({ recipe, onSelect, onEdit, onDelete }: RecipeCardPro
 
   return (
     <Card
-      className="cursor-pointer transition-shadow hover:shadow-md"
+      className={`cursor-pointer transition-all hover:shadow-md ${
+        isSelected ? 'ring-2 ring-primary' : ''
+      }`}
       onClick={handleCardClick}
       role="button"
       tabIndex={0}
@@ -103,9 +121,22 @@ export function RecipeCard({ recipe, onSelect, onEdit, onDelete }: RecipeCardPro
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg leading-tight line-clamp-2" data-testid="recipe-card-title">
+          {/* Checkbox for selection */}
+          <div className="mt-0.5 shrink-0" onClick={handleCheckboxChange}>
+            <Checkbox
+              checked={isSelected}
+              aria-label={`Select recipe ${recipe.title}`}
+              data-testid="recipe-card-checkbox"
+            />
+          </div>
+
+          <CardTitle
+            className="text-lg leading-tight line-clamp-2 flex-1"
+            data-testid="recipe-card-title"
+          >
             {recipe.title}
           </CardTitle>
+
           <div className="flex gap-1 shrink-0">
             <Button
               variant="ghost"

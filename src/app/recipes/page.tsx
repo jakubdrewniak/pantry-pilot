@@ -31,6 +31,7 @@ import { useRecipesList } from '@/lib/hooks/useRecipesList'
 export default function RecipesListPage(): JSX.Element {
   const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
+  const [selectedRecipeIds, setSelectedRecipeIds] = useState<Set<string>>(new Set())
 
   const {
     searchTerm,
@@ -85,6 +86,53 @@ export default function RecipesListPage(): JSX.Element {
     console.log('Select recipe:', recipeId)
   }
 
+  /**
+   * Toggles selection state for a single recipe
+   * Logs the updated selection to console
+   */
+  const handleRecipeToggle = (recipeId: string): void => {
+    setSelectedRecipeIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(recipeId)) {
+        newSet.delete(recipeId)
+      } else {
+        newSet.add(recipeId)
+      }
+      return newSet
+    })
+  }
+
+  /**
+   * Toggles selection for all recipes on current page
+   * If all are selected, deselects all. Otherwise, selects all.
+   */
+  const handleSelectAll = (): void => {
+    setSelectedRecipeIds(prev => {
+      const currentPageIds = new Set(recipes.map(r => r.id))
+      const allSelected = recipes.every(r => prev.has(r.id))
+
+      const newSet = new Set(prev)
+
+      if (allSelected) {
+        currentPageIds.forEach(id => newSet.delete(id))
+      } else {
+        currentPageIds.forEach(id => newSet.add(id))
+      }
+
+      return newSet
+    })
+  }
+
+  /**
+   * Check if all recipes on current page are selected
+   */
+  const areAllSelected = recipes.length > 0 && recipes.every(r => selectedRecipeIds.has(r.id))
+
+  /**
+   * Check if some (but not all) recipes are selected
+   */
+  const areSomeSelected = recipes.some(r => selectedRecipeIds.has(r.id)) && !areAllSelected
+
   const handleRecipeSaved = (): void => {
     // Refresh the recipes list after saving a new recipe
     refetch()
@@ -129,7 +177,12 @@ export default function RecipesListPage(): JSX.Element {
           <RecipeGrid
             recipes={recipes}
             loading={loading}
+            selectedRecipeIds={selectedRecipeIds}
+            allSelected={areAllSelected}
+            someSelected={areSomeSelected}
             onRecipeSelect={handleRecipeSelect}
+            onRecipeToggle={handleRecipeToggle}
+            onSelectAll={handleSelectAll}
             onEditRecipe={handleEditRecipe}
             onDeleteRecipe={handleDeleteRecipe}
           />
