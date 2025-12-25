@@ -83,7 +83,6 @@ describe('Recipe Form Validation', () => {
 
         // Assert
         expect(error).toBe('Title must be at least 3 characters')
-        expect(error).toBe('NON EXISTING')
       })
 
       it('should reject title with more than 100 characters', () => {
