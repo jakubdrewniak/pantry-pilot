@@ -125,6 +125,8 @@ jobs:
               return '⏭️';
             };
             
+            const runUrl = `https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}`;
+            
             const body = `## ${emoji} CI Status
             
             | Check | Status |
@@ -134,6 +136,8 @@ jobs:
             | E2E Tests | ${statusIcon(e2e)} ${e2e} |
             
             **Overall:** ${status}
+            
+            [📋 View workflow logs](${runUrl})
             
             <sub>Commit: ${{ github.sha }}</sub>`;
             
