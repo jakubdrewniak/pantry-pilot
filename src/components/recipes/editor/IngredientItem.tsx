@@ -42,7 +42,6 @@ export const IngredientItem = ({
    * Handles input change for quantity (number field)
    */
   const handleQuantityChange = (value: string): void => {
-    const test;
     const numValue = parseFloat(value)
     // Allow empty string or valid numbers
     if (value === '' || !isNaN(numValue)) {
