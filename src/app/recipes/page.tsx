@@ -9,7 +9,9 @@ import { SearchInput } from '@/components/SearchInput'
 import { FilterSection } from '@/components/FilterSection'
 import { RecipeGrid } from '@/components/RecipeGrid'
 import { PaginationControls } from '@/components/PaginationControls'
+import { DeleteConfirmationDialog } from '@/components/DeleteConfirmationDialog'
 import { useRecipesList } from '@/lib/hooks/useRecipesList'
+import { RecipeApiService, RecipeApiErrorHandler } from '@/lib/services/recipe-api.service'
 
 /**
  * RecipesListPage
@@ -32,6 +34,10 @@ export default function RecipesListPage(): JSX.Element {
   const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedRecipeIds, setSelectedRecipeIds] = useState<Set<string>>(new Set())
+
+  // Delete confirmation state
+  const [recipeToDelete, setRecipeToDelete] = useState<{ id: string; title: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const {
     searchTerm,
@@ -71,9 +77,53 @@ export default function RecipesListPage(): JSX.Element {
     setPageSize(size)
   }
 
+  /**
+   * Opens the delete confirmation dialog for a single recipe
+   * Finds the recipe title for display in the dialog
+   */
   const handleDeleteRecipe = (recipeId: string): void => {
-    // TODO: Implement recipe deletion
-    console.log('Delete recipe:', recipeId)
+    const recipe = recipes.find(r => r.id === recipeId)
+    if (recipe) {
+      setRecipeToDelete({ id: recipeId, title: recipe.title })
+    }
+  }
+
+  /**
+   * Performs the actual deletion after user confirms
+   * Handles loading state, errors, and refreshes the list on success
+   */
+  const handleConfirmDelete = async (): Promise<void> => {
+    if (!recipeToDelete) return
+
+    setIsDeleting(true)
+
+    try {
+      await RecipeApiService.deleteRecipe(recipeToDelete.id)
+
+      // Remove from selection if it was selected
+      setSelectedRecipeIds(prev => {
+        const newSet = new Set(prev)
+        newSet.delete(recipeToDelete.id)
+        return newSet
+      })
+
+      // Close dialog and refresh list
+      setRecipeToDelete(null)
+      refetch()
+    } catch (error) {
+      if (RecipeApiErrorHandler.shouldRedirectToLogin(error)) {
+        router.push('/login')
+      }
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  /**
+   * Closes the delete confirmation dialog
+   */
+  const handleCancelDelete = (): void => {
+    setRecipeToDelete(null)
   }
 
   const handleEditRecipe = (recipeId: string): void => {
@@ -213,6 +263,16 @@ export default function RecipesListPage(): JSX.Element {
           open={modalOpen}
           onOpenChange={setModalOpen}
           onRecipeSaved={handleRecipeSaved}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <DeleteConfirmationDialog
+          open={recipeToDelete !== null}
+          title="Delete Recipe"
+          description={`Are you sure you want to delete "${recipeToDelete?.title}"? This action cannot be undone.`}
+          isDeleting={isDeleting}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCancelDelete}
         />
       </div>
     </div>
