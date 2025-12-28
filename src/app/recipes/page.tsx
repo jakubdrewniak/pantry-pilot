@@ -10,6 +10,8 @@ import { FilterSection } from '@/components/FilterSection'
 import { RecipeGrid } from '@/components/RecipeGrid'
 import { PaginationControls } from '@/components/PaginationControls'
 import { DeleteConfirmationDialog } from '@/components/DeleteConfirmationDialog'
+import { Button } from '@/components/ui/button'
+import { Trash2 } from 'lucide-react'
 import { useRecipesList } from '@/lib/hooks/useRecipesList'
 import { RecipeApiService, RecipeApiErrorHandler } from '@/lib/services/recipe-api.service'
 
@@ -35,9 +37,13 @@ export default function RecipesListPage(): JSX.Element {
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedRecipeIds, setSelectedRecipeIds] = useState<Set<string>>(new Set())
 
-  // Delete confirmation state
+  // Single recipe delete confirmation state
   const [recipeToDelete, setRecipeToDelete] = useState<{ id: string; title: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Bulk delete confirmation state
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   const {
     searchTerm,
@@ -126,6 +132,57 @@ export default function RecipesListPage(): JSX.Element {
     setRecipeToDelete(null)
   }
 
+  /**
+   * Opens the bulk delete confirmation dialog
+   */
+  const handleBulkDeleteClick = (): void => {
+    if (selectedRecipeIds.size > 0) {
+      setShowBulkDeleteDialog(true)
+    }
+  }
+
+  /**
+   * Performs bulk deletion after user confirms
+   * Handles loading state, clears selection, and refreshes the list
+   */
+  const handleConfirmBulkDelete = async (): Promise<void> => {
+    if (selectedRecipeIds.size === 0) return
+
+    setIsBulkDeleting(true)
+
+    try {
+      const ids = Array.from(selectedRecipeIds)
+      const result = await RecipeApiService.bulkDeleteRecipes(ids)
+
+      // Clear selection for successfully deleted recipes
+      setSelectedRecipeIds(prev => {
+        const newSet = new Set(prev)
+        result.deleted.forEach(id => newSet.delete(id))
+        return newSet
+      })
+
+      // Close dialog and refresh list
+      setShowBulkDeleteDialog(false)
+      refetch()
+
+      // Log results for debugging (could be replaced with toast notification)
+      console.log('Bulk delete results:', result.summary)
+    } catch (error) {
+      if (RecipeApiErrorHandler.shouldRedirectToLogin(error)) {
+        router.push('/login')
+      }
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }
+
+  /**
+   * Closes the bulk delete confirmation dialog
+   */
+  const handleCancelBulkDelete = (): void => {
+    setShowBulkDeleteDialog(false)
+  }
+
   const handleEditRecipe = (recipeId: string): void => {
     // Navigate to edit page using Next.js router (client-side navigation)
     router.push(`/recipes/${recipeId}/edit`)
@@ -202,6 +259,12 @@ export default function RecipesListPage(): JSX.Element {
 
           {/* Action Toolbar */}
           <div className="flex flex-col sm:flex-row gap-2">
+            {selectedRecipeIds.size > 0 && (
+              <Button variant="destructive" onClick={handleBulkDeleteClick} className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                Delete Selected ({selectedRecipeIds.size})
+              </Button>
+            )}
             <CreateRecipeButton />
             <AiRecipeGenerationButton onOpen={() => setModalOpen(true)} />
           </div>
@@ -265,7 +328,7 @@ export default function RecipesListPage(): JSX.Element {
           onRecipeSaved={handleRecipeSaved}
         />
 
-        {/* Delete Confirmation Dialog */}
+        {/* Single Delete Confirmation Dialog */}
         <DeleteConfirmationDialog
           open={recipeToDelete !== null}
           title="Delete Recipe"
@@ -273,6 +336,16 @@ export default function RecipesListPage(): JSX.Element {
           isDeleting={isDeleting}
           onConfirm={handleConfirmDelete}
           onCancel={handleCancelDelete}
+        />
+
+        {/* Bulk Delete Confirmation Dialog */}
+        <DeleteConfirmationDialog
+          open={showBulkDeleteDialog}
+          title="Delete Selected Recipes"
+          description={`Are you sure you want to delete ${selectedRecipeIds.size} selected recipe${selectedRecipeIds.size === 1 ? '' : 's'}? This action cannot be undone.`}
+          isDeleting={isBulkDeleting}
+          onConfirm={handleConfirmBulkDelete}
+          onCancel={handleCancelBulkDelete}
         />
       </div>
     </div>

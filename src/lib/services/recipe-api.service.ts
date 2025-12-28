@@ -1,4 +1,4 @@
-import type { CreateRecipeRequest, Recipe } from '@/types/types'
+import type { CreateRecipeRequest, Recipe, BulkDeleteRecipesResponse } from '@/types/types'
 
 /**
  * Custom error class for Recipe API errors
@@ -181,6 +181,44 @@ export class RecipeApiService {
     }
 
     // 204 No Content - no body to parse
+  }
+
+  /**
+   * Deletes multiple recipes in a single request
+   *
+   * @param ids - Array of recipe UUIDs to delete (1-50)
+   * @returns Promise resolving to bulk delete results
+   * @throws RecipeApiError with status code and error details
+   *
+   * Endpoints: DELETE /api/recipes
+   *
+   * Status codes:
+   * - 200: Request processed (check response for individual results)
+   * - 400: Validation error (invalid IDs or out of range)
+   * - 401: Unauthorized
+   * - 500: Server error
+   *
+   * Note: Returns 200 even if some or all deletions fail.
+   * Check response.summary and response.failed for details.
+   */
+  static async bulkDeleteRecipes(ids: string[]): Promise<BulkDeleteRecipesResponse> {
+    const response = await fetch('/api/recipes', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ ids }),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({
+        error: 'Unknown error',
+        message: 'Failed to parse error response',
+      }))
+      throw new RecipeApiError(response.status, errorData)
+    }
+
+    return response.json()
   }
 }
 
