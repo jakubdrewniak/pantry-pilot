@@ -125,7 +125,7 @@ export const AiRecipeGenerationModal = ({
       if (onRecipeSaved) {
         onRecipeSaved(savedRecipe)
       }
-
+      setRecipe(undefined)
       // Close modal after successful save
       onOpenChange(false)
     } catch (error) {
@@ -162,13 +162,22 @@ export const AiRecipeGenerationModal = ({
 
     // Reset state when closing
     if (!newOpen) {
-      setRecipe(undefined)
-      setWarnings([])
-      setPantryEmpty(false)
-      setIsGenerating(false)
-      setIsSaving(false)
-      setSaveError(undefined)
+      resetState()
     }
+  }
+
+  const onClose = () => {
+    resetState()
+    onOpenChange(false)
+  }
+
+  const resetState = () => {
+    setRecipe(undefined)
+    setWarnings([])
+    setPantryEmpty(false)
+    setIsGenerating(false)
+    setIsSaving(false)
+    setSaveError(undefined)
   }
 
   return (
@@ -234,7 +243,7 @@ export const AiRecipeGenerationModal = ({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={onClose}
                 disabled={isSaving}
                 data-testid="ai-recipe-close-button"
               >
