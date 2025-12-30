@@ -164,9 +164,6 @@ export default function RecipesListPage(): JSX.Element {
       // Close dialog and refresh list
       setShowBulkDeleteDialog(false)
       refetch()
-
-      // Log results for debugging (could be replaced with toast notification)
-      console.log('Bulk delete results:', result.summary)
     } catch (error) {
       if (RecipeApiErrorHandler.shouldRedirectToLogin(error)) {
         router.push('/login')
