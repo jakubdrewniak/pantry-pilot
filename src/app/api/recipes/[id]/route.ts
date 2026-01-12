@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { authenticateRequest } from '@/lib/api-auth'
-import { RecipeService } from '@/lib/services/recipe.service'
+import { RecipeService, NoHouseholdError } from '@/lib/services/recipe.service'
 import { CreateRecipeSchema } from '@/lib/validation/recipes'
 import type { GetRecipeResponse, UpdateRecipeResponse } from '@/types/types'
 import type { Database } from '@/db/database.types'
@@ -115,7 +115,21 @@ export async function GET(
     return NextResponse.json(recipe, { status: 200 })
   } catch (error) {
     // ========================================================================
-    // 5. GLOBAL ERROR HANDLER
+    // 5. ERROR HANDLING - MAP SERVICE ERRORS TO HTTP STATUS CODES
+    // ========================================================================
+
+    if (error instanceof NoHouseholdError) {
+      return NextResponse.json(
+        {
+          error: 'Forbidden',
+          message: error.message,
+        },
+        { status: 403 }
+      )
+    }
+
+    // ========================================================================
+    // 6. GLOBAL ERROR HANDLER
     // ========================================================================
 
     // Log the error for debugging, but don't expose details to client
@@ -282,7 +296,21 @@ export async function PUT(
     return NextResponse.json(recipe, { status: 200 })
   } catch (error) {
     // ========================================================================
-    // 6. GLOBAL ERROR HANDLER
+    // 6. ERROR HANDLING - MAP SERVICE ERRORS TO HTTP STATUS CODES
+    // ========================================================================
+
+    if (error instanceof NoHouseholdError) {
+      return NextResponse.json(
+        {
+          error: 'Forbidden',
+          message: error.message,
+        },
+        { status: 403 }
+      )
+    }
+
+    // ========================================================================
+    // 7. GLOBAL ERROR HANDLER
     // ========================================================================
 
     console.error('[PUT /api/recipes/[id]] Unexpected error:', error)
@@ -406,7 +434,21 @@ export async function DELETE(
     return new NextResponse(null, { status: 204 })
   } catch (error) {
     // ========================================================================
-    // 5. GLOBAL ERROR HANDLER
+    // 5. ERROR HANDLING - MAP SERVICE ERRORS TO HTTP STATUS CODES
+    // ========================================================================
+
+    if (error instanceof NoHouseholdError) {
+      return NextResponse.json(
+        {
+          error: 'Forbidden',
+          message: error.message,
+        },
+        { status: 403 }
+      )
+    }
+
+    // ========================================================================
+    // 6. GLOBAL ERROR HANDLER
     // ========================================================================
 
     console.error('[DELETE /api/recipes/[id]] Unexpected error:', error)
