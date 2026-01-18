@@ -53,18 +53,9 @@ export const LoginForm = (): JSX.Element => {
 
       {/* Password Field */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="password">
-            Password <span className="text-destructive">*</span>
-          </Label>
-          <Link
-            href="/auth/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
-            tabIndex={isPending ? -1 : 0}
-          >
-            Forgot password?
-          </Link>
-        </div>
+        <Label htmlFor="password">
+          Password <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="password"
           name="password"
@@ -76,6 +67,15 @@ export const LoginForm = (): JSX.Element => {
           aria-invalid={!!state?.error}
           aria-describedby={state?.error ? 'form-error' : undefined}
         />
+        <div className="text-right">
+          <Link
+            href="/auth/forgot-password"
+            className="text-sm text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+            tabIndex={isPending ? -1 : 0}
+          >
+            Forgot password?
+          </Link>
+        </div>
       </div>
 
       {/* Error Display */}
