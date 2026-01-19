@@ -33,6 +33,7 @@ When introducing changes to the project, always follow the directory structure b
 
 ### Guidelines for clean code
 
+- Application code and comments MUST be in English.
 - Use feedback from linters to improve the code when making changes.
 - Prioritize error handling and edge cases.
 - Handle errors and edge cases at the beginning of functions.
