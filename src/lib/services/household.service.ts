@@ -322,10 +322,10 @@ export class HouseholdService {
       throw new HouseholdNotFoundError()
     }
 
-    // Get household details
+    // Get household details including owner_id
     const { data: household, error: householdError } = await this.supabase
       .from('households')
-      .select('id, name, created_at')
+      .select('id, name, created_at, owner_id')
       .eq('id', householdId)
       .single()
 
@@ -368,6 +368,7 @@ export class HouseholdService {
       id: household.id,
       name: household.name,
       createdAt: household.created_at,
+      ownerId: household.owner_id,
       members,
     }
   }

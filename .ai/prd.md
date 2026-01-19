@@ -235,6 +235,67 @@ Out of scope for MVP:
     - From a recipe view, I can select ingredients and click "Remove from pantry" to delete them.
     - Removed items no longer appear in my pantry.
 
+- US-025
+  - Title: Automatic household creation
+  - Description: As a new user, I want my personal household to be created automatically upon registration so that I can start using the app immediately.
+  - Acceptance criteria:
+    - After successful registration, a household named "Moje gospodarstwo" (or similar default) is created automatically.
+    - I am assigned as the owner of this household.
+    - A pantry and shopping list are created for the household.
+    - I can immediately add items to my pantry and create recipes.
+
+- US-026
+  - Title: View household information
+  - Description: As a user, I want to see information about my current household so that I know which household I'm managing.
+  - Acceptance criteria:
+    - I can see the name of my current household in the application header or settings.
+    - I can see the number of members in my household.
+    - I can see a list of household members with their email addresses.
+
+- US-027
+  - Title: Rename household
+  - Description: As a household owner, I want to change my household's name so that it reflects my preferences.
+  - Acceptance criteria:
+    - I can access household settings and edit the name.
+    - The new name must be 3-50 characters long.
+    - After saving, the updated name appears throughout the application.
+    - Only the household owner can rename the household.
+
+- US-028
+  - Title: Create own household (leave shared)
+  - Description: As a member of someone else's household, I want to create my own household so that I can manage my own pantry and recipes independently.
+  - Acceptance criteria:
+    - When I am a member (not owner) of a household, I can create my own household.
+    - Upon creation, I am automatically removed from the previous household.
+    - A new pantry and shopping list are created for my new household.
+    - I am asked if I want to migrate my resources (recipes, pantry items, shopping list) to the new household.
+
+- US-029
+  - Title: Delete household
+  - Description: As a household owner, I want to delete my household when I no longer need it.
+  - Acceptance criteria:
+    - Only the household owner can delete the household.
+    - I cannot delete a household that has other members (they must leave first).
+    - A confirmation prompt appears before deletion.
+    - Upon deletion, all associated data (recipes, pantry, shopping list) is permanently removed.
+
+- US-030
+  - Title: View household members
+  - Description: As a household member, I want to see who else has access to the shared household.
+  - Acceptance criteria:
+    - I can view a list of all household members.
+    - Each member entry shows their email address and role (owner/member).
+    - I can see when each member joined the household.
+
+- US-031
+  - Title: Remove household member
+  - Description: As a household owner, I want to remove a member from my household so that they no longer have access to shared resources.
+  - Acceptance criteria:
+    - Only the household owner can remove members.
+    - I cannot remove myself (the owner) from the household.
+    - A confirmation prompt appears before removal.
+    - Upon removal, the member loses access to shared pantry, recipes, and shopping list.
+
 ## 6. Success Metrics
 
 - 60% of meal planning sessions result in AI-powered recipe generation.

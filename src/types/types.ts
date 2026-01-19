@@ -36,10 +36,12 @@ export interface Household {
   name: string
   createdAt: string
   memberCount?: number
+  ownerId?: string
 }
 
 export type HouseholdWithMembers = Household & {
   members: User[]
+  ownerId: string
 }
 
 // Membership DTOs
@@ -315,6 +317,49 @@ export interface AddShoppingListItemsResponse {
 export interface MarkPurchasedResponse {
   item: ShoppingListItem
   pantryItem: PantryItem
+}
+
+// ============================================================================
+// HOUSEHOLD DASHBOARD TYPES (View Models)
+// ============================================================================
+
+// User's role in the household
+export type HouseholdRole = 'owner' | 'member'
+
+// Dashboard page view model
+export interface HouseholdDashboardViewModel {
+  household: HouseholdWithMembers | null
+  userRole: HouseholdRole | null
+  isLoading: boolean
+  error: string | null
+}
+
+// Member with role information (extends User with role details)
+export interface MemberWithRole extends User {
+  role: HouseholdRole
+  joinedAt: string
+  isCurrentUser: boolean
+}
+
+// Edit household name form state
+export interface EditHouseholdNameFormData {
+  name: string
+  isSubmitting: boolean
+  error: string | null
+}
+
+// Create household form state
+export interface CreateHouseholdFormData {
+  name: string
+  isSubmitting: boolean
+  error: string | null
+}
+
+// API errors mapped to user-friendly messages
+export interface HouseholdError {
+  code: 'NOT_FOUND' | 'FORBIDDEN' | 'CONFLICT' | 'VALIDATION' | 'NETWORK' | 'UNKNOWN'
+  message: string
+  details?: unknown
 }
 
 // ============================================================================
