@@ -63,6 +63,12 @@ export interface Invitation {
   createdAt: string
 }
 
+// Invitation with household context (for current user invitations)
+export interface InvitationWithHousehold extends Invitation {
+  householdName: string
+  ownerEmail: string
+}
+
 // Pantry DTOs
 export interface Pantry {
   id: string
@@ -253,6 +259,10 @@ export interface CreateInvitationResponse {
 
 export interface AcceptInvitationResponse {
   membership: Membership
+}
+
+export interface CurrentUserInvitationsResponse {
+  data: InvitationWithHousehold[]
 }
 
 // Pantry Responses
