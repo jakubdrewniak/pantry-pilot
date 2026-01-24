@@ -35,6 +35,21 @@ This document provides a comprehensive implementation plan for the household inv
 - `src/app/api/invitations/current/route.ts` - GET current user endpoint (enhancement)
 - `src/types/types.ts` - Added InvitationWithHousehold and response types
 
+---
+
+## Quick Reference: File Locations
+
+| Component                     | File                                                             |
+| ----------------------------- | ---------------------------------------------------------------- |
+| **Validation Schemas**        | `src/lib/validation/invitations.ts`                              |
+| **Service Layer**             | `src/lib/services/invitation.service.ts`                         |
+| **Types**                     | `src/types/types.ts`                                             |
+| **List & Create Invitations** | `src/app/api/households/[householdId]/invitations/route.ts`      |
+| **Accept Invitation**         | `src/app/api/invitations/[token]/accept/route.ts`                |
+| **Cancel Invitation**         | `src/app/api/households/[householdId]/invitations/[id]/route.ts` |
+| **Current User Invitations**  | `src/app/api/invitations/current/route.ts`                       |
+| **Auth Helper**               | `src/lib/api-auth.ts`                                            |
+
 ## 1. Endpoints Overview
 
 The invitation system consists of **five REST API endpoints** (4 core + 1 enhancement):
@@ -571,7 +586,18 @@ Key Benefits:
 
 ### 6.3 Token Security
 
-- **Generate tokens using cryptographically secure random generator** (e.g., `crypto.randomBytes(32).toString('hex')`)
+**Implementation**: See `src/lib/services/invitation.service.ts`
+
+```typescript
+// Generate cryptographically secure token
+const token = crypto.randomUUID()
+
+// Set expiration (7 days from now)
+const expiresAt = new Date()
+expiresAt.setDate(expiresAt.getDate() + 7)
+```
+
+- **Generate tokens using cryptographically secure random generator** - Uses `crypto.randomUUID()`
 - **Tokens must be unique** - enforce via UNIQUE constraint in database
 - **Tokens are single-use** - update invitation status to 'accepted' after use
 - **Tokens expire** - set expiration to 7 days from creation (configurable)
@@ -579,9 +605,21 @@ Key Benefits:
 
 ### 6.4 Input Validation
 
+**Implementation**: See `src/lib/validation/invitations.ts`
+
 Use Zod schemas to validate all inputs:
 
 **Email validation**:
+
+Implementation: `src/lib/validation/invitations.ts`
+
+```typescript
+invitedEmail: z.string()
+  .trim()
+  .toLowerCase()
+  .email('Invalid email format')
+  .max(255, 'Email must be at most 255 characters')
+```
 
 - Must match RFC 5322 email format
 - Trim whitespace
@@ -589,10 +627,25 @@ Use Zod schemas to validate all inputs:
 
 **Token validation**:
 
+Implementation: `src/lib/validation/invitations.ts`
+
+```typescript
+token: z.string()
+  .trim()
+  .min(1, 'Token is required')
+  .max(255, 'Token must be at most 255 characters')
+```
+
 - Must be non-empty string
 - Match expected format (alphanumeric, specific length)
 
 **UUID validation**:
+
+Implementation: `src/lib/validation/invitations.ts`
+
+```typescript
+export const UUIDSchema = z.string().uuid('Invalid UUID format')
+```
 
 - Validate householdId and invitationId are valid UUIDs
 - Use Zod's `z.string().uuid()` schema
@@ -723,114 +776,139 @@ All errors should return consistent JSON structure:
 
 ## 9. Implementation Steps
 
-### Phase 1: Setup and Validation Layer
+### Phase 1: Setup and Validation Layer (✅ Completed)
 
-1. **Create Zod validation schemas** (`src/lib/validation/invitation-validation.ts`):
-   - `createInvitationSchema` - validates `CreateInvitationRequest`
-   - `acceptInvitationSchema` - validates `AcceptInvitationRequest`
-   - `householdIdParamSchema` - validates UUID parameters
-   - `tokenParamSchema` - validates token format
+**File**: `src/lib/validation/invitations.ts`
 
-2. **Create service layer** (`src/lib/services/invitation-service.ts`):
-   - Define service class/module structure
-   - Import Supabase client and types
-   - Set up error handling utilities
+1. **Create Zod validation schemas**:
+   - ✅ `CreateInvitationSchema` - validates `CreateInvitationRequest`
+   - ✅ `AcceptInvitationSchema` - validates `AcceptInvitationRequest`
+   - ✅ `HouseholdIdParamSchema` - validates UUID parameters
+   - ✅ `InvitationIdParamSchema` - validates invitation UUID
+   - ✅ `TokenParamSchema` - validates token format
 
-### Phase 2: Service Implementation
+2. **Create service layer**:
+   - ✅ **File**: `src/lib/services/invitation.service.ts`
+   - ✅ Define service class/module structure (`InvitationService`)
+   - ✅ Import Supabase client and types
+   - ✅ Set up error handling utilities (custom error classes)
+
+### Phase 2: Service Implementation (✅ Completed)
+
+**File**: `src/lib/services/invitation.service.ts`
 
 3. **Implement `listInvitations` method**:
-   - Accept `householdId` and `userId` parameters
-   - Verify user membership in household
-   - Query invitations with status = 'pending'
-   - Transform DB records to DTOs
-   - Return array of Invitation objects
+   - ✅ Accept `householdId` and `userId` parameters
+   - ✅ Verify user membership in household
+   - ✅ Query invitations with status = 'pending'
+   - ✅ Transform DB records to DTOs
+   - ✅ Return array of Invitation objects
 
 4. **Implement `createInvitation` method**:
-   - Accept `householdId`, `invitedEmail`, and `userId` parameters
-   - Verify user is owner
-   - Check for duplicate memberships
-   - Check for existing invitations
-   - Generate secure token (use `crypto.randomBytes(32).toString('hex')`)
-   - Calculate expiration date (7 days from now)
-   - Insert invitation record
-   - Return Invitation DTO
+   - ✅ Accept `householdId`, `invitedEmail`, and `userId` parameters
+   - ✅ Verify user is owner
+   - ✅ Check for duplicate memberships
+   - ✅ Check for existing invitations
+   - ✅ Generate secure token using `crypto.randomUUID()`
+   - ✅ Calculate expiration date (7 days from now)
+   - ✅ Insert invitation record
+   - ✅ Return Invitation DTO
 
 5. **Implement `acceptInvitation` method**:
-   - Accept `token` and `userId` parameters
-   - Fetch invitation by token
-   - Validate invitation status and expiration
-   - Verify invitation email matches user email
-   - Check for existing membership
-   - Begin transaction:
-     - Create membership record
-     - Update invitation status to 'accepted'
-     - Commit
-   - Return Membership DTO
+   - ✅ Accept `token` and `userId` parameters
+   - ✅ Fetch invitation by token
+   - ✅ Validate invitation status and expiration
+   - ✅ Verify invitation email matches user email
+   - ✅ Check for existing membership
+   - ✅ Begin transaction-like operations:
+     - ✅ Create membership record
+     - ✅ Update invitation status to 'accepted'
+     - ✅ Rollback on failure
+   - ✅ Return Membership DTO
 
 6. **Implement `cancelInvitation` method**:
-   - Accept `householdId`, `invitationId`, and `userId` parameters
-   - Verify user is owner
-   - Fetch invitation by id and household_id
-   - Delete invitation or update status to 'cancelled'
-   - Return success
+   - ✅ Accept `householdId`, `invitationId`, and `userId` parameters
+   - ✅ Verify user is owner
+   - ✅ Fetch invitation by id and household_id
+   - ✅ Delete invitation
+   - ✅ Return success (void)
 
-### Phase 3: API Route Handlers
+### Phase 3: API Route Handlers (✅ Completed)
 
 7. **Create GET /api/households/[householdId]/invitations/route.ts**:
-   - Extract householdId from params
-   - Validate householdId with Zod
-   - Get user from session (Supabase Auth)
-   - Call `invitationService.listInvitations()`
-   - Handle errors with appropriate status codes
-   - Return `InvitationsListResponse`
+   - ✅ **File**: `src/app/api/households/[householdId]/invitations/route.ts` (GET handler)
+   - ✅ Extract householdId from params
+   - ✅ Validate householdId with Zod
+   - ✅ Get user from session via `authenticateRequest()`
+   - ✅ Call `invitationService.listInvitations()`
+   - ✅ Handle errors with appropriate status codes
+   - ✅ Return `InvitationsListResponse`
 
 8. **Create POST /api/households/[householdId]/invitations/route.ts**:
-   - Extract householdId from params
-   - Parse and validate request body
-   - Get user from session
-   - Call `invitationService.createInvitation()`
-   - Handle errors with appropriate status codes
-   - Return `CreateInvitationResponse` with 201 status
+   - ✅ **File**: `src/app/api/households/[householdId]/invitations/route.ts` (POST handler)
+   - ✅ Extract householdId from params
+   - ✅ Parse and validate request body
+   - ✅ Get user from session
+   - ✅ Call `invitationService.createInvitation()`
+   - ✅ Handle errors with appropriate status codes
+   - ✅ Return `CreateInvitationResponse` with 201 status
 
 9. **Create PATCH /api/invitations/[token]/accept/route.ts**:
-   - Extract token from params
-   - Parse and validate request body
-   - Get user from session
-   - Call `invitationService.acceptInvitation()`
-   - Handle errors with appropriate status codes
-   - Return `AcceptInvitationResponse` with 200 status
+   - ✅ **File**: `src/app/api/invitations/[token]/accept/route.ts`
+   - ✅ Extract token from params
+   - ✅ Parse and validate request body (optional)
+   - ✅ Get user from session
+   - ✅ Call `invitationService.acceptInvitation()`
+   - ✅ Handle errors with appropriate status codes
+   - ✅ Return `AcceptInvitationResponse` with 200 status
 
 10. **Create DELETE /api/households/[householdId]/invitations/[id]/route.ts**:
-    - Extract householdId and id from params
-    - Validate parameters with Zod
-    - Get user from session
-    - Call `invitationService.cancelInvitation()`
-    - Handle errors with appropriate status codes
-    - Return 204 No Content
+    - ✅ **File**: `src/app/api/households/[householdId]/invitations/[id]/route.ts`
+    - ✅ Extract householdId and id from params
+    - ✅ Validate parameters with Zod
+    - ✅ Get user from session
+    - ✅ Call `invitationService.cancelInvitation()`
+    - ✅ Handle errors with appropriate status codes
+    - ✅ Return 204 No Content
 
 ### Phase 3.1: Enhancement - Current User Invitations (✅ Completed)
 
 11. **Add InvitationWithHousehold type to types.ts**:
-    - Extends Invitation with householdName and ownerEmail
-    - Add CurrentUserInvitationsResponse type
-    - Export types for use in service and routes
+    - ✅ **File**: `src/types/types.ts`
+    - ✅ Extends Invitation with householdName and ownerEmail
+    - ✅ Add CurrentUserInvitationsResponse type
+    - ✅ Export types for use in service and routes
+
+```typescript
+// src/types/types.ts
+export interface InvitationWithHousehold extends Invitation {
+  householdName: string
+  ownerEmail: string
+}
+
+export interface CurrentUserInvitationsResponse {
+  data: InvitationWithHousehold[]
+}
+```
 
 12. **Add listCurrentUserInvitations method to InvitationService**:
-    - Accept userId parameter
-    - Fetch user's email from authentication
-    - Query invitations by invited_email (normalized)
-    - Filter for status = 'pending' AND expires_at > now
-    - Join with households table to get name and owner_id
-    - Fetch owner email for each invitation
-    - Transform to InvitationWithHousehold DTOs
-    - Return enriched invitation list
+    - ✅ **File**: `src/lib/services/invitation.service.ts`
+    - ✅ Accept userId parameter
+    - ✅ Fetch user's email from authentication
+    - ✅ Query invitations by invited_email (normalized)
+    - ✅ Filter for status = 'pending' AND expires_at > now
+    - ✅ Join with households table to get name and owner_id
+    - ✅ Fetch owner email for each invitation
+    - ✅ Transform to InvitationWithHousehold DTOs
+    - ✅ Return enriched invitation list
 
 13. **Create GET /api/invitations/current/route.ts**:
-    - Verify authentication (cookie-based)
-    - Call `invitationService.listCurrentUserInvitations()`
-    - Return 200 OK with CurrentUserInvitationsResponse
-    - Simple error handling (only 401 and 500)
-    - No parameters needed (uses authenticated user's email)
+    - ✅ **File**: `src/app/api/invitations/current/route.ts`
+    - ✅ Verify authentication (cookie-based)
+    - ✅ Call `invitationService.listCurrentUserInvitations()`
+    - ✅ Return 200 OK with CurrentUserInvitationsResponse
+    - ✅ Simple error handling (only 401 and 500)
+    - ✅ No parameters needed (uses authenticated user's email)
 
 ### Phase 4: Testing
 
@@ -1097,10 +1175,75 @@ The implementation is considered complete when:
 
 ## 13. References
 
-- **API Specification**: `.ai/api-plan.md` (lines 267-370)
-- **Database Schema**: `.ai/db-plan.md` (lines 29-37)
-- **Type Definitions**: `src/types/types.ts`
+### Implementation Files
+
+**Validation Layer:**
+
+- `src/lib/validation/invitations.ts` - All Zod validation schemas
+
+**Service Layer:**
+
+- `src/lib/services/invitation.service.ts` - InvitationService class with all business logic
+
+**API Routes:**
+
+- `src/app/api/households/[householdId]/invitations/route.ts` - GET & POST endpoints
+- `src/app/api/invitations/[token]/accept/route.ts` - PATCH endpoint
+- `src/app/api/households/[householdId]/invitations/[id]/route.ts` - DELETE endpoint
+- `src/app/api/invitations/current/route.ts` - GET current user endpoint (enhancement)
+
+**Type Definitions:**
+
+- `src/types/types.ts` - All DTOs and response types
+  - Invitation interface
+  - InvitationWithHousehold interface (enhancement)
+  - Membership interface
+  - CreateInvitationRequest
+  - AcceptInvitationRequest
+  - InvitationsListResponse
+  - CreateInvitationResponse
+  - AcceptInvitationResponse
+  - CurrentUserInvitationsResponse (enhancement)
+
+**Helper Utilities:**
+
+- `src/lib/api-auth.ts` - Authentication helper (`authenticateRequest` function)
+- `src/db/supabase.client.ts` - Supabase client configuration
+- `src/db/database.types.ts` - Database schema types
+
+### External Documentation
+
+- **API Specification**: `.ai/api-plan.md`
+- **Database Schema**: `.ai/db-plan.md`
 - **Tech Stack**: `.ai/techstack.md`
 - **Supabase Documentation**: https://supabase.com/docs
 - **Zod Documentation**: https://zod.dev
 - **Next.js API Routes**: https://nextjs.org/docs/app/building-your-application/routing/route-handlers
+
+### Key Code Examples
+
+**Token Generation** (`invitation.service.ts`):
+
+```typescript
+const token = crypto.randomUUID()
+```
+
+**Expiration Calculation** (`invitation.service.ts`):
+
+```typescript
+const expiresAt = new Date()
+expiresAt.setDate(expiresAt.getDate() + 7)
+```
+
+**Email Normalization** (`invitations.ts`):
+
+```typescript
+invitedEmail: z.string().trim().toLowerCase().email()
+```
+
+**Authentication** (All route files):
+
+```typescript
+const { user, supabase, errorResponse } = await authenticateRequest(request)
+if (errorResponse) return errorResponse
+```
