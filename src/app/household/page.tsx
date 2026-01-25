@@ -14,6 +14,7 @@ import {
   MembersList,
   EditHouseholdNameModal,
   CreateOwnHouseholdModal,
+  HouseholdInvitationsSection,
 } from './components'
 import type { Household } from '@/types/types'
 
@@ -146,6 +147,13 @@ export default function HouseholdPage(): JSX.Element {
         members={enrichedMembers}
         currentUserId={currentUserId}
         userRole={viewModel.userRole}
+      />
+
+      {/* Invitations section */}
+      <HouseholdInvitationsSection
+        householdId={viewModel.household.id}
+        userRole={viewModel.userRole}
+        className="mt-8"
       />
 
       {/* Modals */}

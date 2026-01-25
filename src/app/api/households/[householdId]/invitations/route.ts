@@ -41,7 +41,7 @@ import { Database } from '@/db/database.types'
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { householdId: string } }
+  { params }: { params: Promise<{ householdId: string }> }
 ): Promise<
   NextResponse<InvitationsListResponse | { error: string; message?: string; details?: unknown }>
 > {
@@ -58,7 +58,8 @@ export async function GET(
     // 2. VALIDATE URL PARAMETERS
     // ========================================================================
 
-    const householdIdValidation = HouseholdIdParamSchema.safeParse(params.householdId)
+    const { householdId: householdIdParam } = await params
+    const householdIdValidation = HouseholdIdParamSchema.safeParse(householdIdParam)
 
     if (!householdIdValidation.success) {
       return NextResponse.json(
@@ -173,7 +174,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { householdId: string } }
+  { params }: { params: Promise<{ householdId: string }> }
 ): Promise<
   NextResponse<CreateInvitationResponse | { error: string; message?: string; details?: unknown }>
 > {
@@ -190,7 +191,8 @@ export async function POST(
     // 2. VALIDATE URL PARAMETERS
     // ========================================================================
 
-    const householdIdValidation = HouseholdIdParamSchema.safeParse(params.householdId)
+    const { householdId: householdIdParam } = await params
+    const householdIdValidation = HouseholdIdParamSchema.safeParse(householdIdParam)
 
     if (!householdIdValidation.success) {
       return NextResponse.json(

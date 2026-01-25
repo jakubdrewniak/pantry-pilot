@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { InvitationNotificationBadge } from '@/app/household/components/InvitationNotificationBadge'
 
 const navigationItems = [
   {
@@ -132,13 +133,14 @@ export function Navigation() {
             {navigationItems.map(item => {
               const isActive = pathname === item.href
               const Icon = item.icon
+              const isHouseholdLink = item.href === '/household'
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors',
+                    'flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors relative',
                     'hover:bg-accent hover:text-accent-foreground',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                     isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
@@ -148,6 +150,9 @@ export function Navigation() {
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   <span className="hidden md:inline">{item.name}</span>
+                  {isHouseholdLink && (
+                    <InvitationNotificationBadge className="absolute -right-1 -top-1" />
+                  )}
                 </Link>
               )
             })}

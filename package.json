@@ -25,6 +25,7 @@
     "test:e2e:cleanup": "npx tsx tests/teardown/test-teardown.ts"
   },
   "dependencies": {
+    "date-fns": "^4.1.0",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-checkbox": "^1.1.2",

@@ -56,7 +56,7 @@ import { Database } from '@/db/database.types'
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { householdId: string; id: string } }
+  { params }: { params: Promise<{ householdId: string; id: string }> }
 ): Promise<NextResponse<void | { error: string; message?: string; details?: unknown }>> {
   try {
     // ========================================================================
@@ -71,8 +71,10 @@ export async function DELETE(
     // 2. VALIDATE URL PARAMETERS
     // ========================================================================
 
+    const { householdId: householdIdParam, id: invitationIdParam } = await params
+
     // Validate householdId
-    const householdIdValidation = HouseholdIdParamSchema.safeParse(params.householdId)
+    const householdIdValidation = HouseholdIdParamSchema.safeParse(householdIdParam)
 
     if (!householdIdValidation.success) {
       return NextResponse.json(
@@ -89,7 +91,7 @@ export async function DELETE(
     }
 
     // Validate invitation id
-    const invitationIdValidation = InvitationIdParamSchema.safeParse(params.id)
+    const invitationIdValidation = InvitationIdParamSchema.safeParse(invitationIdParam)
 
     if (!invitationIdValidation.success) {
       return NextResponse.json(

@@ -67,7 +67,7 @@ import { Database } from '@/db/database.types'
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ): Promise<
   NextResponse<AcceptInvitationResponse | { error: string; message?: string; details?: unknown }>
 > {
@@ -84,7 +84,8 @@ export async function PATCH(
     // 2. VALIDATE URL PARAMETERS
     // ========================================================================
 
-    const tokenValidation = TokenParamSchema.safeParse(params.token)
+    const { token: tokenParam } = await params
+    const tokenValidation = TokenParamSchema.safeParse(tokenParam)
 
     if (!tokenValidation.success) {
       return NextResponse.json(

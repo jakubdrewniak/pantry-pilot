@@ -373,6 +373,49 @@ export interface HouseholdError {
 }
 
 // ============================================================================
+// INVITATION VIEW MODELS
+// ============================================================================
+
+/**
+ * View model for invitation notification badge
+ * Used in: InvitationNotificationBadge
+ */
+export interface InvitationNotificationViewModel {
+  count: number // number of pending invitations
+  isLoading: boolean
+}
+
+/**
+ * View model for create invitation form
+ * Used in: CreateInvitationForm
+ */
+export interface CreateInvitationFormData {
+  invitedEmail: string // email address of the person being invited
+  isSubmitting: boolean // whether the form is being submitted
+  error: string | null // validation or API error
+}
+
+/**
+ * View model for sent invitations list
+ * Used in: SentInvitationsList
+ */
+export interface SentInvitationsViewModel {
+  invitations: Invitation[] // list of sent invitations
+  isLoading: boolean // whether data is being loaded
+  error: string | null // error fetching data
+}
+
+/**
+ * View model for received invitations list
+ * Used in: ReceivedInvitationsList
+ */
+export interface ReceivedInvitationsViewModel {
+  invitations: InvitationWithHousehold[] // list of received invitations with context
+  isLoading: boolean // whether data is being loaded
+  error: string | null // error fetching data
+}
+
+// ============================================================================
 // RECIPE EDITOR TYPES (View Models)
 // ============================================================================
 

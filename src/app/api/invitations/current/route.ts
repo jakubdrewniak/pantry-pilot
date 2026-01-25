@@ -86,8 +86,23 @@ export async function GET(
     // 2. BUSINESS LOGIC - GET CURRENT USER'S INVITATIONS
     // ========================================================================
 
+    // Ensure user has email
+    if (!user!.email) {
+      return NextResponse.json(
+        {
+          error: 'Bad Request',
+          message: 'User email is required',
+        },
+        { status: 400 }
+      )
+    }
+
+    console.log('[GET /api/invitations/current] Fetching invitations for email:', user!.email)
+
     const invitationService = new InvitationService(supabase as unknown as SupabaseClient<Database>)
-    const invitations = await invitationService.listCurrentUserInvitations(user!.id)
+    const invitations = await invitationService.listCurrentUserInvitations(user!.email)
+
+    console.log('[GET /api/invitations/current] Found invitations:', invitations.length)
 
     // ========================================================================
     // 3. SUCCESS RESPONSE

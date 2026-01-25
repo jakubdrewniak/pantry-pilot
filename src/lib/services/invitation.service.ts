@@ -517,16 +517,11 @@ export class InvitationService {
    * 4. Join with users to get owner email
    * 5. Transform to DTOs with context
    */
-  async listCurrentUserInvitations(userId: string): Promise<InvitationWithHousehold[]> {
-    // Get user's email
-    const { data: user, error: userError } = await this.supabase.auth.admin.getUserById(userId)
+  async listCurrentUserInvitations(userEmail: string): Promise<InvitationWithHousehold[]> {
+    // Normalize email to lowercase for comparison
+    const normalizedEmail = userEmail.toLowerCase()
 
-    if (userError || !user?.user?.email) {
-      console.error('[InvitationService] Error fetching user email:', userError)
-      throw new Error('Unable to verify user email')
-    }
-
-    const userEmail = user.user.email.toLowerCase()
+    console.log('[InvitationService] Searching for invitations with email:', normalizedEmail)
 
     // Fetch pending, non-expired invitations for this email with household context
     const { data: invitations, error: fetchError } = await this.supabase
@@ -541,15 +536,20 @@ export class InvitationService {
         created_at,
         households (
           id,
-          name,
-          owner_id
+          name
         )
       `
       )
-      .eq('invited_email', userEmail)
+      .eq('invited_email', normalizedEmail)
       .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString()) // Only non-expired
       .order('created_at', { ascending: false })
+
+    console.log('[InvitationService] Query result:', {
+      count: invitations?.length ?? 0,
+      error: fetchError,
+      invitations: invitations,
+    })
 
     if (fetchError) {
       console.error('[InvitationService] Error fetching user invitations:', fetchError)
@@ -561,13 +561,13 @@ export class InvitationService {
     }
 
     // Transform to DTOs with household context
-    const result: InvitationWithHousehold[] = []
-
-    for (const inv of invitations) {
-      // Get owner email
-      const { data: owner } = await this.supabase.auth.admin.getUserById(inv.households.owner_id)
-
-      result.push({
+    // Note: We show "Household Owner" instead of actual email because:
+    // - auth.admin API is not available in RLS context
+    // - The household name is sufficient for users to identify invitations
+    // - This avoids needing admin privileges or additional database views
+    const result: InvitationWithHousehold[] = invitations
+      .filter(inv => inv.households !== null) // Filter out any null households
+      .map(inv => ({
         id: inv.id,
         householdId: inv.household_id,
         invitedEmail: inv.invited_email,
@@ -575,9 +575,10 @@ export class InvitationService {
         expiresAt: inv.expires_at,
         createdAt: inv.created_at,
         householdName: inv.households.name,
-        ownerEmail: owner?.user?.email ?? 'Unknown',
-      })
-    }
+        ownerEmail: 'Household Owner',
+      }))
+
+    console.log('[InvitationService] Transformed result:', result.length, 'invitations')
 
     return result
   }
