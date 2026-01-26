@@ -53,12 +53,19 @@ import { Database } from '@/db/database.types'
  * - Token must not be expired
  * - Invitation email must match authenticated user's email
  * - User cannot already be a member of the household
+ * - Users can only belong to ONE household at a time
+ * - Accepting an invitation automatically leaves current household
+ * - Empty households owned by the leaving user are automatically deleted
  *
  * Flow:
  * 1. Authenticate user
  * 2. Validate token from URL params
  * 3. Validate request body (optional, contains same token)
- * 4. Accept invitation via service layer
+ * 4. Accept invitation via service layer:
+ *    - Leave current household (if any)
+ *    - Clean up empty owned household (if applicable)
+ *    - Join new household
+ *    - Mark invitation as accepted
  * 5. Return membership details
  *
  * @see src/lib/api-auth.ts - authentication helper
@@ -152,7 +159,7 @@ export async function PATCH(
     // ========================================================================
 
     const invitationService = new InvitationService(supabase as unknown as SupabaseClient<Database>)
-    const membership = await invitationService.acceptInvitation(token, user!.id)
+    const membership = await invitationService.acceptInvitation(token, user!.id, user!.email!)
 
     // ========================================================================
     // 5. SUCCESS RESPONSE

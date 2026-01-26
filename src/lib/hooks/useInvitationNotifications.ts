@@ -6,7 +6,7 @@ import type { CurrentUserInvitationsResponse } from '@/types/types'
 /**
  * Hook for fetching pending invitations count for the logged-in user
  * Used in: InvitationNotificationBadge
- * Implements polling every 30 seconds for real-time updates
+ * Fetches invitations once on mount
  */
 export function useInvitationNotifications() {
   const [count, setCount] = useState<number>(0)
@@ -37,14 +37,7 @@ export function useInvitationNotifications() {
       }
     }
 
-    // Initial fetch
     fetchInvitations()
-
-    // Polling every 30 seconds
-    const interval = setInterval(fetchInvitations, 30000)
-
-    // Cleanup
-    return () => clearInterval(interval)
   }, [])
 
   return { count, isLoading }

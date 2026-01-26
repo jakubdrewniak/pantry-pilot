@@ -11,6 +11,7 @@ import {
 import { HouseholdNameSchema, UUIDSchema } from '@/lib/validation/households'
 import type { GetHouseholdResponse, Household } from '@/types/types'
 import { Database } from '@/db/database.types'
+import { createAdminClient } from '@/db/supabase.server'
 
 /**
  * Route params type
@@ -83,7 +84,11 @@ export async function GET(
     // 3. BUSINESS LOGIC - GET HOUSEHOLD WITH MEMBERS
     // ========================================================================
 
-    const householdService = new HouseholdService(supabase as unknown as SupabaseClient<Database>)
+    const adminClient = createAdminClient()
+    const householdService = new HouseholdService(
+      supabase as unknown as SupabaseClient<Database>,
+      adminClient as unknown as SupabaseClient<Database>
+    )
     const household = await householdService.getHousehold(householdId, user!.id)
 
     // ========================================================================
@@ -224,7 +229,11 @@ export async function PATCH(
     // 4. BUSINESS LOGIC - UPDATE HOUSEHOLD
     // ========================================================================
 
-    const householdService = new HouseholdService(supabase as unknown as SupabaseClient<Database>)
+    const adminClient = createAdminClient()
+    const householdService = new HouseholdService(
+      supabase as unknown as SupabaseClient<Database>,
+      adminClient as unknown as SupabaseClient<Database>
+    )
     const household = await householdService.updateHousehold(householdId, user!.id, name)
 
     // ========================================================================
@@ -343,7 +352,11 @@ export async function DELETE(
     // 3. BUSINESS LOGIC - DELETE HOUSEHOLD
     // ========================================================================
 
-    const householdService = new HouseholdService(supabase as unknown as SupabaseClient<Database>)
+    const adminClient = createAdminClient()
+    const householdService = new HouseholdService(
+      supabase as unknown as SupabaseClient<Database>,
+      adminClient as unknown as SupabaseClient<Database>
+    )
     await householdService.deleteHousehold(householdId, user!.id)
 
     // ========================================================================

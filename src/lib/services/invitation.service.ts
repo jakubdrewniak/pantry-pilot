@@ -114,7 +114,8 @@ export class InvitationService {
 
     if (error) {
       console.error('[InvitationService] Error checking membership:', error)
-      return false
+      // Don't silently return false - this could hide real issues
+      throw new Error('Failed to check membership status')
     }
 
     return data !== null
@@ -328,6 +329,7 @@ export class InvitationService {
    *
    * @param token - The invitation token
    * @param userId - The authenticated user's UUID
+   * @param userEmail - The authenticated user's email (from session)
    * @returns Created Membership DTO
    * @throws InvitationNotFoundError if token doesn't exist
    * @throws InvitationExpiredError if invitation has expired
@@ -337,25 +339,31 @@ export class InvitationService {
    *
    * Authorization: Any authenticated user can accept an invitation if the email matches.
    *
+   * Business Rules:
+   * - Users can only belong to ONE household at a time
+   * - Accepting an invitation will automatically leave their current household
+   * - If the user was the owner of their old household and it becomes empty, it will be deleted
+   *
    * Security:
    * - Validates token exists and is pending
    * - Checks expiration date
    * - Verifies invitation email matches authenticated user's email
-   * - Prevents duplicate memberships
-   * - Uses transaction to ensure atomicity
+   * - Prevents duplicate memberships in the same household
    *
    * Flow:
    * 1. Fetch invitation by token
    * 2. Validate invitation status (must be 'pending')
    * 3. Check expiration
-   * 4. Get user's email and verify match
-   * 5. Check if already a member
-   * 6. BEGIN TRANSACTION:
-   *    - Create membership record
-   *    - Update invitation status to 'accepted'
-   * 7. Return Membership DTO
+   * 4. Verify user email matches invitation
+   * 5. Check if already a member of target household
+   * 6. Leave current household (if any):
+   *    - Remove membership record
+   *    - If was owner and household is now empty, delete household
+   * 7. Create membership record in new household
+   * 8. Update invitation status to 'accepted'
+   * 9. Return Membership DTO
    */
-  async acceptInvitation(token: string, userId: string): Promise<Membership> {
+  async acceptInvitation(token: string, userId: string, userEmail: string): Promise<Membership> {
     // Fetch invitation by token
     const { data: invitation, error: fetchError } = await this.supabase
       .from('household_invitations')
@@ -379,22 +387,74 @@ export class InvitationService {
       throw new InvitationExpiredError()
     }
 
-    // Get user's email and verify match
-    const { data: user } = await this.supabase.auth.admin.getUserById(userId)
-    if (!user?.user?.email) {
-      throw new Error('Unable to verify user email')
-    }
-
-    if (user.user.email.toLowerCase() !== invitation.invited_email.toLowerCase()) {
+    // Verify user email matches invitation
+    if (userEmail.toLowerCase() !== invitation.invited_email.toLowerCase()) {
       throw new InvitationEmailMismatchError()
     }
 
-    // Check if user is already a member
+    // Check if user is already a member of the target household
     if (await this.isMember(invitation.household_id, userId)) {
       throw new AlreadyMemberError()
     }
 
-    // Create membership record
+    // Handle existing household membership
+    // Since users can only belong to one household, we need to:
+    // 1. Get their current household (if any)
+    // 2. Remove them from it
+    // 3. If they were the owner and it's now empty, delete the household
+    const { data: currentMembership } = await this.supabase
+      .from('user_households')
+      .select('household_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (currentMembership) {
+      // Get current household details to check ownership
+      const { data: currentHousehold } = await this.supabase
+        .from('households')
+        .select('id, owner_id')
+        .eq('id', currentMembership.household_id)
+        .single()
+
+      // Remove user from current household
+      const { error: deleteError } = await this.supabase
+        .from('user_households')
+        .delete()
+        .eq('user_id', userId)
+
+      if (deleteError) {
+        console.error('[InvitationService] Error leaving current household:', deleteError)
+        throw new Error('Failed to leave current household')
+      }
+
+      // If user was the owner, check if household is now empty and delete it
+      if (currentHousehold && currentHousehold.owner_id === userId) {
+        const { data: remainingMembers } = await this.supabase
+          .from('user_households')
+          .select('user_id')
+          .eq('household_id', currentHousehold.id)
+          .limit(1)
+
+        // If no remaining members, delete the household (cascade will handle related records)
+        if (!remainingMembers || remainingMembers.length === 0) {
+          const { error: deleteHouseholdError } = await this.supabase
+            .from('households')
+            .delete()
+            .eq('id', currentHousehold.id)
+
+          if (deleteHouseholdError) {
+            console.error(
+              '[InvitationService] Error deleting empty household:',
+              deleteHouseholdError
+            )
+            // Don't fail the invitation acceptance if household cleanup fails
+            // The user has already left, so they can still join the new household
+          }
+        }
+      }
+    }
+
+    // Create membership record for the new household
     const { data: membership, error: membershipError } = await this.supabase
       .from('user_households')
       .insert({

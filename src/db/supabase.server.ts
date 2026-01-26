@@ -16,6 +16,7 @@
  * @see src/lib/api-auth.ts - for API Routes authentication
  */
 import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 import type { Database } from './database.types'
@@ -48,6 +49,32 @@ export async function createClient() {
             // user sessions.
           }
         },
+      },
+    }
+  )
+}
+
+/**
+ * Create an admin Supabase client with service role key
+ *
+ * This client bypasses RLS and has full database access.
+ * Use ONLY for operations that require admin privileges:
+ * - Fetching user information from auth.users
+ * - Admin operations that need to bypass RLS
+ *
+ * IMPORTANT: Never expose this client to the browser
+ * IMPORTANT: Always validate user permissions before using this client
+ *
+ * @returns Supabase client with admin privileges
+ */
+export function createAdminClient() {
+  return createSupabaseClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
   )

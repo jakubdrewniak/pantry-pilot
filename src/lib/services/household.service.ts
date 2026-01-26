@@ -67,7 +67,10 @@ export class HasOtherMembersError extends Error {
  * - Uses Supabase client for database operations
  */
 export class HouseholdService {
-  constructor(private supabase: TypedSupabaseClient) {}
+  constructor(
+    private supabase: TypedSupabaseClient,
+    private adminClient?: TypedSupabaseClient
+  ) {}
 
   /**
    * Helper: Check if user is a member of a household
@@ -159,7 +162,14 @@ export class HouseholdService {
       .eq('user_id', userId)
       .maybeSingle()
 
+    console.log('[HouseholdService] getUserHousehold membership query:', {
+      userId,
+      membership,
+      error: membershipError,
+    })
+
     if (membershipError || !membership) {
+      console.log('[HouseholdService] No membership found or error occurred')
       return null
     }
 
@@ -176,7 +186,14 @@ export class HouseholdService {
       .eq('id', membership.household_id)
       .single()
 
+    console.log('[HouseholdService] getUserHousehold households query:', {
+      householdId: membership.household_id,
+      household,
+      error: householdError,
+    })
+
     if (householdError || !household) {
+      console.log('[HouseholdService] No household found or error occurred')
       return null
     }
 
@@ -352,8 +369,19 @@ export class HouseholdService {
     // Get user details for each member
     const members: User[] = []
     if (memberships) {
+      // Use admin client if available, otherwise we can't get user emails
+      const client = this.adminClient || this.supabase
+
       for (const membership of memberships) {
-        const { data: user } = await this.supabase.auth.admin.getUserById(membership.user_id)
+        const { data: user, error: userError } = await client.auth.admin.getUserById(
+          membership.user_id
+        )
+
+        if (userError) {
+          console.error('[HouseholdService] Error fetching user details:', userError)
+          // Skip this user if we can't fetch their details
+          continue
+        }
 
         if (user?.user) {
           members.push({
@@ -495,8 +523,19 @@ export class HouseholdService {
     // Get user details for each member
     const members: User[] = []
     if (memberships) {
+      // Use admin client if available, otherwise we can't get user emails
+      const client = this.adminClient || this.supabase
+
       for (const membership of memberships) {
-        const { data: user } = await this.supabase.auth.admin.getUserById(membership.user_id)
+        const { data: user, error: userError } = await client.auth.admin.getUserById(
+          membership.user_id
+        )
+
+        if (userError) {
+          console.error('[HouseholdService] Error fetching user details:', userError)
+          // Skip this user if we can't fetch their details
+          continue
+        }
 
         if (user?.user) {
           members.push({
@@ -547,7 +586,9 @@ export class HouseholdService {
 
     // Check if invited user is already a member
     // First, find user by email
-    const { data: invitedUser } = await this.supabase.auth.admin.listUsers()
+    // Use admin client if available, otherwise we can't list users
+    const client = this.adminClient || this.supabase
+    const { data: invitedUser } = await client.auth.admin.listUsers()
     const targetUser = invitedUser?.users.find(u => u.email === invitedEmail)
 
     if (targetUser) {

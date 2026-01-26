@@ -11,6 +11,7 @@ import {
 import { InviteMemberSchema, UUIDSchema } from '@/lib/validation/households'
 import type { MembersListResponse, InviteMemberResponse } from '@/types/types'
 import { Database } from '@/db/database.types'
+import { createAdminClient } from '@/db/supabase.server'
 
 /**
  * Route params type
@@ -84,7 +85,11 @@ export async function GET(
     // 3. BUSINESS LOGIC - LIST MEMBERS
     // ========================================================================
 
-    const householdService = new HouseholdService(supabase as unknown as SupabaseClient<Database>)
+    const adminClient = createAdminClient()
+    const householdService = new HouseholdService(
+      supabase as unknown as SupabaseClient<Database>,
+      adminClient as unknown as SupabaseClient<Database>
+    )
     const members = await householdService.listMembers(householdId, user!.id)
 
     // ========================================================================
@@ -244,7 +249,11 @@ export async function POST(
     // 4. BUSINESS LOGIC - INVITE MEMBER
     // ========================================================================
 
-    const householdService = new HouseholdService(supabase as unknown as SupabaseClient<Database>)
+    const adminClient = createAdminClient()
+    const householdService = new HouseholdService(
+      supabase as unknown as SupabaseClient<Database>,
+      adminClient as unknown as SupabaseClient<Database>
+    )
     const invitation = await householdService.inviteMember(householdId, user!.id, invitedEmail)
 
     // ========================================================================
