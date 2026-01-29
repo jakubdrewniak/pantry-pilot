@@ -42,21 +42,22 @@ Moduł Households & Memberships zarządza gospodarstwami domowymi użytkowników
 
 - **Metoda HTTP**: POST
 - **Struktura URL**: `/api/households`
-- **Opis**: Tworzy nowe gospodarstwo dla użytkownika. Dostępne tylko gdy użytkownik jest członkiem cudzego gospodarstwa (nie właścicielem). Automatycznie usuwa użytkownika z poprzedniego gospodarstwa.
+- **Opis**: Powrót do własnego gospodarstwa lub utworzenie nowego. Dostępne tylko gdy użytkownik jest członkiem cudzego gospodarstwa. Jeśli użytkownik posiada własne gospodarstwo (jako owner_id), automatycznie wraca do niego. Jeśli nie, tworzy nowe gospodarstwo. W obu przypadkach automatycznie usuwa użytkownika z poprzedniego gospodarstwa.
 - **Parametry**:
   - Wymagane: Uwierzytelnienie (cookie session)
 - **Request Body**:
 
 ```json
 {
-  "name": "string" // 3-50 znaków
+  "name": "string" // 3-50 znaków, OPCJONALNE - używane tylko gdy tworzone jest nowe gospodarstwo
 }
 ```
 
 - **Warunki dostępności**:
-  - ❌ User jest właścicielem gospodarstwa → 409 Conflict
-  - ✅ User jest członkiem cudzego gospodarstwa → Dozwolone
-  - ⚠️ User bez gospodarstwa (edge case) → Dozwolone (fallback)
+  - ❌ User jest aktywnym członkiem własnego gospodarstwa → 409 Conflict
+  - ✅ User jest członkiem cudzego gospodarstwa i ma własne gospodarstwo → Powrót do własnego (rejoin)
+  - ✅ User jest członkiem cudzego gospodarstwa i NIE ma własnego → Utworzenie nowego (wymaga name)
+  - ⚠️ User bez gospodarstwa (edge case) → Utworzenie nowego (wymaga name)
 
 ### 2.3 GET /api/households/{householdId}
 
@@ -154,7 +155,7 @@ interface Invitation {
 
 // Request DTOs (Command Models)
 interface CreateHouseholdRequest {
-  name: string
+  name?: string // Opcjonalne - wymagane tylko gdy tworzenie nowego gospodarstwa
 }
 
 interface InviteMemberRequest {
@@ -164,9 +165,12 @@ interface InviteMemberRequest {
 // Response Types
 interface HouseholdsListResponse {
   data: Household[] // Zawsze 0 lub 1 element
+  ownedHouseholdId: string | null // NOWE - ID gospodarstwa którego user jest właścicielem
 }
 
-type CreateHouseholdResponse = Household
+type CreateHouseholdResponse = Household & {
+  rejoined: boolean // true = wrócił do istniejącego, false = utworzył nowe
+}
 type GetHouseholdResponse = HouseholdWithMembers
 
 interface MembersListResponse {
@@ -228,11 +232,18 @@ export type InviteMemberInput = z.infer<typeof InviteMemberSchema>
       "createdAt": "2025-10-13T12:00:00Z",
       "memberCount": 3
     }
-  ]
+  ],
+  "ownedHouseholdId": "uuid-or-null" // NOWE - ID gospodarstwa którego user jest właścicielem (może być różne od data[0])
 }
 ```
 
 > **Uwaga**: Tablica zawsze zawiera 0 lub 1 element (constraint 1:1). Format tablicy zachowany dla spójności API.
+>
+> **Nowe pole `ownedHouseholdId`**: Pozwala frontendowi określić czy user ma własne gospodarstwo:
+>
+> - Jeśli `ownedHouseholdId !== null && ownedHouseholdId !== data[0].id` → user jest członkiem cudzego gospodarstwa ale ma własne (rejoin możliwy)
+> - Jeśli `ownedHouseholdId === null` → user nigdy nie był właścicielem (tylko create możliwy)
+> - Jeśli `ownedHouseholdId === data[0].id` → user jest w swoim własnym gospodarstwie (ani rejoin ani create)
 
 **Błędy**:
 
@@ -240,25 +251,31 @@ export type InviteMemberInput = z.infer<typeof InviteMemberSchema>
 
 ### 4.2 POST /api/households
 
-**Sukces (201 Created)**:
+**Sukces (200 OK lub 201 Created)**:
 
 ```json
 {
   "id": "uuid",
   "name": "Moje gospodarstwo",
-  "createdAt": "2025-10-13T12:05:00Z"
+  "createdAt": "2025-10-13T12:05:00Z",
+  "rejoined": false // true jeśli wrócił do istniejącego, false jeśli utworzył nowe
 }
 ```
 
-**Nagłówki odpowiedzi**:
+**Kody sukcesu**:
+
+- `200 OK` - powrót do istniejącego gospodarstwa (rejoin)
+- `201 Created` - utworzenie nowego gospodarstwa
+
+**Nagłówki odpowiedzi** (tylko dla 201 Created):
 
 - `Location: /api/households/{id}`
 
 **Błędy**:
 
-- 400 Bad Request - nieprawidłowe dane (nazwa < 3 lub > 50 znaków)
+- 400 Bad Request - nieprawidłowe dane (brak nazwy gdy tworzenie nowego, lub nazwa < 3 lub > 50 znaków)
 - 401 Unauthorized - brak uwierzytelnienia
-- 409 Conflict - użytkownik już jest właścicielem gospodarstwa
+- 409 Conflict - użytkownik już jest aktywnym członkiem własnego gospodarstwa
 
 ### 4.3 GET /api/households/{householdId}
 
@@ -451,29 +468,46 @@ CREATE TRIGGER on_auth_user_created
    └── SELECT households
        JOIN user_households ON user_id = userId
        WITH member count
-3. Transformacja do Household[]
-4. Return { data: [household] } lub { data: [] }
+3. householdService.getOwnedHouseholdId(user.id)  // NOWE
+   └── SELECT id FROM households WHERE owner_id = userId
+4. Transformacja do Household[]
+5. Return {
+     data: [household] lub [],
+     ownedHouseholdId: ownedId lub null  // NOWE
+   }
 ```
 
 #### POST /api/households
 
 ```
 1. authenticateRequest() → user
-2. Walidacja Zod (HouseholdNameSchema)
-3. householdService.createHousehold(user.id, name)
-   ├── Sprawdzenie: czy user jest właścicielem gospodarstwa?
-   │   └── TAK → throw AlreadyOwnerError
-   ├── Sprawdzenie: czy user jest członkiem cudzego?
-   │   └── currentHouseholdId = ...
-   ├── BEGIN TRANSACTION
-   │   ├── INSERT INTO households (owner_id, name)
-   │   ├── INSERT INTO user_households (user_id, household_id)
-   │   ├── INSERT INTO pantries (household_id)
-   │   ├── INSERT INTO shopping_lists (household_id)
-   │   └── IF currentHouseholdId:
-   │       └── DELETE FROM user_households WHERE user_id AND household_id = current
-   └── COMMIT
-4. Return household (201)
+2. householdService.rejoinOrCreateHousehold(user.id, name?)
+   ├── Sprawdzenie: czy user posiada własne gospodarstwo (owner_id)?
+   │   └── SELECT households WHERE owner_id = userId
+   ├── Sprawdzenie: czy user jest aktywnym członkiem własnego gospodarstwa?
+   │   └── TAK → throw AlreadyActiveMemberError (409)
+   ├── Pobranie obecnego członkostwa
+   │   └── currentHouseholdId = getUserMembership(userId)
+   │
+   ├── JEŚLI user MA własne gospodarstwo (rejoin):
+   │   ├── BEGIN TRANSACTION
+   │   │   ├── DELETE FROM user_households WHERE user_id AND household_id = current
+   │   │   └── INSERT INTO user_households (user_id, household_id = owned)
+   │   │       ON CONFLICT DO NOTHING
+   │   └── COMMIT
+   │   └── Return ownedHousehold (200, rejoined: true)
+   │
+   └── JEŚLI user NIE MA własnego gospodarstwa (create new):
+       ├── Walidacja Zod (HouseholdNameSchema - name wymagane)
+       ├── BEGIN TRANSACTION
+       │   ├── INSERT INTO households (owner_id, name)
+       │   ├── INSERT INTO user_households (user_id, household_id)
+       │   ├── INSERT INTO pantries (household_id)
+       │   ├── INSERT INTO shopping_lists (household_id)
+       │   └── IF currentHouseholdId:
+       │       └── DELETE FROM user_households WHERE user_id AND household_id = current
+       └── COMMIT
+       └── Return newHousehold (201, rejoined: false)
 ```
 
 #### DELETE /api/households/{householdId}
@@ -550,17 +584,17 @@ CREATE TRIGGER on_auth_user_created
 
 ### 7.1 Tabela kodów błędów
 
-| Kod | Scenariusz                  | Odpowiedź                                                                      |
-| --- | --------------------------- | ------------------------------------------------------------------------------ |
-| 400 | Nieprawidłowy JSON          | `{ error: "Bad Request", message: "Invalid JSON format" }`                     |
-| 400 | Walidacja Zod               | `{ error: "Validation failed", details: [...] }`                               |
-| 401 | Brak uwierzytelnienia       | `{ error: "Unauthorized", message: "Authentication required" }`                |
-| 403 | Brak uprawnień właściciela  | `{ error: "Forbidden", message: "Only the owner can perform this action" }`    |
-| 404 | Nie znaleziono/brak dostępu | `{ error: "Not Found", message: "Household not found" }`                       |
-| 409 | User już jest właścicielem  | `{ error: "Conflict", message: "Already own a household" }`                    |
-| 409 | Użytkownik już członkiem    | `{ error: "Conflict", message: "User is already a member" }`                   |
-| 409 | Gospodarstwo ma członków    | `{ error: "Conflict", message: "Cannot delete household with other members" }` |
-| 500 | Błąd serwera                | `{ error: "Internal Server Error", message: "An unexpected error occurred" }`  |
+| Kod | Scenariusz                                | Odpowiedź                                                                      |
+| --- | ----------------------------------------- | ------------------------------------------------------------------------------ |
+| 400 | Nieprawidłowy JSON                        | `{ error: "Bad Request", message: "Invalid JSON format" }`                     |
+| 400 | Walidacja Zod                             | `{ error: "Validation failed", details: [...] }`                               |
+| 401 | Brak uwierzytelnienia                     | `{ error: "Unauthorized", message: "Authentication required" }`                |
+| 403 | Brak uprawnień właściciela                | `{ error: "Forbidden", message: "Only the owner can perform this action" }`    |
+| 404 | Nie znaleziono/brak dostępu               | `{ error: "Not Found", message: "Household not found" }`                       |
+| 409 | User już jest aktywnym członkiem własnego | `{ error: "Conflict", message: "Already an active member of own household" }`  |
+| 409 | Użytkownik już członkiem                  | `{ error: "Conflict", message: "User is already a member" }`                   |
+| 409 | Gospodarstwo ma członków                  | `{ error: "Conflict", message: "Cannot delete household with other members" }` |
+| 500 | Błąd serwera                              | `{ error: "Internal Server Error", message: "An unexpected error occurred" }`  |
 
 ### 7.2 Wzorzec obsługi błędów w serwisie
 
@@ -580,10 +614,10 @@ export class NotOwnerError extends Error {
   }
 }
 
-export class AlreadyOwnerError extends Error {
+export class AlreadyActiveMemberError extends Error {
   constructor() {
-    super('Already own a household')
-    this.name = 'AlreadyOwnerError'
+    super('Already an active member of own household')
+    this.name = 'AlreadyActiveMemberError'
   }
 }
 
@@ -618,7 +652,7 @@ export class HasOtherMembersError extends Error {
       { status: 403 }
     )
   }
-  if (error instanceof AlreadyOwnerError) {
+  if (error instanceof AlreadyActiveMemberError) {
     return NextResponse.json(
       { error: 'Conflict', message: error.message },
       { status: 409 }
@@ -714,9 +748,10 @@ CREATE INDEX idx_households_owner_id ON households(owner_id);
    - `isMember(householdId, userId): Promise<boolean>`
    - `isOwner(householdId, userId): Promise<boolean>`
    - `getUserMembership(userId): Promise<{ householdId, isOwner } | null>`
+   - `getOwnedHousehold(userId): Promise<Household | null>` (NOWE - pobiera gospodarstwo gdzie user jest owner_id)
 3. Zaimplementuj metody CRUD:
    - `getUserHousehold(userId): Promise<Household | null>`
-   - `createHousehold(userId, name): Promise<Household>` (z logiką opuszczenia cudzego)
+   - `rejoinOrCreateHousehold(userId, name?): Promise<{ household: Household, rejoined: boolean }>` (ZMIENIONE - logika rejoin/create)
    - `getHousehold(householdId, userId): Promise<HouseholdWithMembers>`
    - `updateHousehold(householdId, userId, name): Promise<Household>`
    - `deleteHousehold(householdId, userId): Promise<void>`

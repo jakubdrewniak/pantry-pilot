@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { SupabaseClient } from '@supabase/supabase-js'
 
 import { authenticateRequest } from '@/lib/api-auth'
-import { HouseholdService, AlreadyOwnerError } from '@/lib/services/household.service'
+import { HouseholdService, AlreadyActiveMemberError } from '@/lib/services/household.service'
 import { HouseholdNameSchema } from '@/lib/validation/households'
 import type { HouseholdsListResponse, CreateHouseholdResponse } from '@/types/types'
 import { Database } from '@/db/database.types'
@@ -47,14 +47,18 @@ export async function GET(
     const householdService = new HouseholdService(supabase as unknown as SupabaseClient<Database>)
     const household = await householdService.getUserHousehold(user!.id)
 
+    // Get owned household ID (may be different from current membership)
+    const ownedHouseholdId = await householdService.getOwnedHouseholdId(user!.id)
+
     // ========================================================================
     // 3. SUCCESS RESPONSE
     // ========================================================================
 
-    // Return array with 0 or 1 element (1:1 constraint)
+    // Return array with 0 or 1 element (1:1 constraint) + owned household ID
     return NextResponse.json(
       {
         data: household ? [household] : [],
+        ownedHouseholdId,
       },
       { status: 200 }
     )
@@ -78,28 +82,30 @@ export async function GET(
 /**
  * POST /api/households
  *
- * Creates a new household for the authenticated user.
- * Only available if user is a member of someone else's household (not the owner).
- * Automatically removes user from previous household.
+ * Rejoins user's own household or creates a new one.
+ * - If user owns a household → rejoins it (returns 200)
+ * - If user doesn't own a household → creates new one (returns 201)
+ * Automatically removes user from current household in both scenarios.
  *
  * Headers:
  * - Cookie-based authentication (automatic)
  * - Content-Type: application/json
  *
  * Request Body:
- * - name: string (3-50 characters, trimmed)
+ * - name: string (optional - required only when creating new, 3-50 characters, trimmed)
  *
  * Response:
- * - 201 Created: Returns the created Household with Location header
- * - 400 Bad Request: Invalid input data
+ * - 200 OK: Rejoined owned household
+ * - 201 Created: Created new household with Location header
+ * - 400 Bad Request: Invalid input data or missing name for create
  * - 401 Unauthorized: Missing or invalid authentication
- * - 409 Conflict: User already owns a household
+ * - 409 Conflict: User is already an active member of their own household
  * - 500 Internal Server Error: Unexpected server error
  *
  * Business Rules:
- * - Cannot create if user is already an owner (409)
- * - Can create if user is a member of another household (will be removed from previous)
- * - Automatically creates pantry and shopping_list for new household
+ * - Cannot rejoin if user is already active member of own household (409)
+ * - Rejoin scenario: name is ignored, returns owned household
+ * - Create scenario: name is required, creates new household with resources
  *
  * @see src/lib/api-auth.ts - authentication helper
  * @see src/lib/services/household.service.ts - business logic
@@ -123,10 +129,13 @@ export async function POST(
     // 2. PARSE & VALIDATE REQUEST BODY
     // ========================================================================
 
-    // Parse JSON body
-    let body: unknown
+    // Parse JSON body (empty body is OK for rejoin scenario)
+    let body: unknown = {}
     try {
-      body = await request.json()
+      const text = await request.text()
+      if (text) {
+        body = JSON.parse(text)
+      }
     } catch {
       return NextResponse.json(
         {
@@ -137,47 +146,76 @@ export async function POST(
       )
     }
 
-    // Validate with Zod schema
-    const validationResult = HouseholdNameSchema.safeParse(body)
-
-    if (!validationResult.success) {
-      return NextResponse.json(
-        {
-          error: 'Validation failed',
-          details: validationResult.error.errors.map(err => ({
-            field: err.path.join('.'),
-            message: err.message,
-          })),
-        },
-        { status: 400 }
-      )
-    }
-
-    const { name } = validationResult.data
+    // Extract name (optional)
+    const name = (body as any)?.name
 
     // ========================================================================
-    // 3. BUSINESS LOGIC - CREATE HOUSEHOLD
+    // 3. BUSINESS LOGIC - REJOIN OR CREATE HOUSEHOLD
     // ========================================================================
 
     const householdService = new HouseholdService(supabase as unknown as SupabaseClient<Database>)
-    const household = await householdService.createHousehold(user!.id, name)
+
+    let result: { household: any; rejoined: boolean }
+    try {
+      result = await householdService.rejoinOrCreateHousehold(user!.id, name)
+    } catch (error: any) {
+      // If name is missing for create scenario
+      if (error.message === 'Name is required when creating a new household') {
+        return NextResponse.json(
+          {
+            error: 'Bad Request',
+            message: error.message,
+          },
+          { status: 400 }
+        )
+      }
+      throw error
+    }
+
+    // Validate name only if creating new (not rejoining)
+    if (!result.rejoined && name) {
+      const validationResult = HouseholdNameSchema.safeParse({ name })
+      if (!validationResult.success) {
+        return NextResponse.json(
+          {
+            error: 'Validation failed',
+            details: validationResult.error.errors.map(err => ({
+              field: err.path.join('.'),
+              message: err.message,
+            })),
+          },
+          { status: 400 }
+        )
+      }
+    }
 
     // ========================================================================
     // 4. SUCCESS RESPONSE
     // ========================================================================
 
-    return NextResponse.json(household, {
-      status: 201,
-      headers: {
-        Location: `/api/households/${household.id}`,
-      },
-    })
+    const response: CreateHouseholdResponse = {
+      ...result.household,
+      rejoined: result.rejoined,
+    }
+
+    if (result.rejoined) {
+      // Rejoined existing household - 200 OK
+      return NextResponse.json(response, { status: 200 })
+    } else {
+      // Created new household - 201 Created with Location header
+      return NextResponse.json(response, {
+        status: 201,
+        headers: {
+          Location: `/api/households/${result.household.id}`,
+        },
+      })
+    }
   } catch (error) {
     // ========================================================================
     // 5. ERROR HANDLING - MAP SERVICE ERRORS TO HTTP STATUS CODES
     // ========================================================================
 
-    if (error instanceof AlreadyOwnerError) {
+    if (error instanceof AlreadyActiveMemberError) {
       return NextResponse.json(
         {
           error: 'Conflict',

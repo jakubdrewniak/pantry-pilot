@@ -10,7 +10,7 @@ export { MembersList } from './MembersList'
 
 // Modals
 export { EditHouseholdNameModal } from './modals/EditHouseholdNameModal'
-export { CreateOwnHouseholdModal } from './modals/CreateOwnHouseholdModal'
+export { ReturnOrCreateHouseholdModal } from './modals/ReturnOrCreateHouseholdModal'
 
 // Invitation components
 export { HouseholdInvitationsSection } from './HouseholdInvitationsSection'

@@ -17,7 +17,9 @@ Kluczowe funkcjonalności:
 - Wyświetlanie nazwy gospodarstwa i liczby członków
 - Lista członków z ich adresami email i rolami (właściciel/członek)
 - Edycja nazwy gospodarstwa (tylko właściciel)
-- Tworzenie nowego własnego gospodarstwa (tylko członkowie, nie właściciele) - **uwaga: opuszcza obecne gospodarstwo**
+- Powrót do własnego gospodarstwa lub utworzenie nowego (tylko członkowie cudzego gospodarstwa) - **uwaga: opuszcza obecne gospodarstwo**
+  - Jeśli członek posiada własne gospodarstwo (był właścicielem przed zaakceptowaniem zaproszenia) → powrót do niego
+  - Jeśli członek nigdy nie miał własnego → utworzenie nowego
 - Usuwanie gospodarstwa (tylko właściciel, gdy brak innych członków)
 
 **Funkcjonalności przyszłościowe (nie w obecnej wersji):**
@@ -45,7 +47,7 @@ HouseholdDashboardPage (src/app/household/page.tsx)
 │   ├── HouseholdTitle (nazwa + badge liczby członków)
 │   └── HouseholdActions (przyciski akcji w zależności od roli)
 │       ├── EditHouseholdNameButton (tylko właściciel)
-│       ├── CreateOwnHouseholdButton (tylko członek)
+│       ├── ReturnOrCreateHouseholdButton (tylko członek - tekst dynamiczny)
 │       └── DeleteHouseholdButton (tylko właściciel)
 ├── HouseholdInfoCard
 │   ├── HouseholdMetadata (data utworzenia, ID)
@@ -56,7 +58,7 @@ HouseholdDashboardPage (src/app/household/page.tsx)
 │       └── MemberInfo (email, rola, data dołączenia)
 └── Modals (komponenty dialogowe)
     ├── EditHouseholdNameModal
-    ├── CreateOwnHouseholdModal
+    ├── ReturnOrCreateHouseholdModal (logika warunkowa: return vs create)
     └── DeleteHouseholdModal
 
 NIEIMPLEMENTOWANE W OBECNEJ WERSJI (przyszłość):
@@ -135,20 +137,23 @@ NIEIMPLEMENTOWANE W OBECNEJ WERSJI (przyszłość):
 - **Opis komponentu:** Grupa przycisów akcji, które są dostępne w zależności od roli użytkownika (właściciel vs członek).
 - **Główne elementy:**
   - `div` z gap spacing
-  - Warunkowe renderowanie przycisków: `EditHouseholdNameButton`, `CreateOwnHouseholdButton`, `DeleteHouseholdButton`
+  - Warunkowe renderowanie przycisków: `EditHouseholdNameButton`, `ReturnOrCreateHouseholdButton`, `DeleteHouseholdButton`
 - **Obsługiwane zdarzenia:**
   - Przekazuje handlery onClick do odpowiednich przycisków
 - **Warunki walidacji:**
   - `EditHouseholdNameButton` - tylko dla właściciela
   - `DeleteHouseholdButton` - tylko dla właściciela
-  - `CreateOwnHouseholdButton` - tylko dla członków (nie właścicieli)
-- **Typy:** `HouseholdRole`
+  - `ReturnOrCreateHouseholdButton` - tylko dla członków (nie właścicieli)
+    - Tekst dynamiczny: "Return to My Household" jeśli ma własne, "Create Own Household" jeśli nie
+- **Typy:** `HouseholdRole`, `boolean` (hasOwnHousehold)
 - **Propsy:**
   ```typescript
   interface HouseholdActionsProps {
     userRole: HouseholdRole
+    hasOwnHousehold: boolean // NOWE - czy użytkownik posiada własne gospodarstwo
+    ownHouseholdName?: string // NOWE - nazwa własnego gospodarstwa (jeśli ma)
     onEditName: () => void
-    onCreateOwn: () => void
+    onReturnOrCreate: () => void // ZMIENIONE z onCreateOwn
     onDelete: () => void
   }
   ```
@@ -255,30 +260,37 @@ NIEIMPLEMENTOWANE W OBECNEJ WERSJI (przyszłość):
   }
   ```
 
-### CreateOwnHouseholdModal
+### ReturnOrCreateHouseholdModal
 
-- **Opis komponentu:** Dialog do utworzenia własnego gospodarstwa dla członka cudzego gospodarstwa. Ostrzeżenie o opuszczeniu obecnego gospodarstwa.
+- **Opis komponentu:** Dialog do powrotu do własnego gospodarstwa LUB utworzenia nowego dla członka cudzego gospodarstwa. Logika warunkowa w zależności od tego czy użytkownik ma własne gospodarstwo.
 - **Główne elementy:**
   - `Dialog` (shadcn/ui)
   - `Alert` z ostrzeżeniem o opuszczeniu obecnego gospodarstwa
-  - `Form` z `Input` dla nazwy nowego gospodarstwa
-  - `Button` utwórz i anuluj
+  - **Jeśli ma własne gospodarstwo (rejoin):**
+    - Informacja: "Wrócisz do: {ownHouseholdName}"
+    - Brak inputu dla nazwy
+    - `Button` "Return to My Household"
+  - **Jeśli nie ma własnego (create):**
+    - `Form` z `Input` dla nazwy nowego gospodarstwa
+    - `Button` "Create Household"
 - **Obsługiwane zdarzenia:**
-  - `onSubmit` - walidacja i wywołanie API POST
+  - `onSubmit` - wywołanie API POST (z nazwą lub bez w zależności od scenariusza)
   - `onOpenChange` - otwarcie/zamknięcie modala
 - **Warunki walidacji:**
-  - Nazwa: 3-50 znaków, wymagana, trimmed
-  - Zgodność z `HouseholdNameSchema`
+  - Nazwa: 3-50 znaków, wymagana tylko gdy tworzenie nowego (create), trimmed
+  - Zgodność z `HouseholdNameSchema` tylko dla create
 - **Typy:**
   - `CreateHouseholdRequest` z `src/types/types`
-  - Response: `CreateHouseholdResponse`
+  - Response: `CreateHouseholdResponse` (zawiera `rejoined: boolean`)
 - **Propsy:**
   ```typescript
-  interface CreateOwnHouseholdModalProps {
+  interface ReturnOrCreateHouseholdModalProps {
     open: boolean
     currentHouseholdName: string
+    hasOwnHousehold: boolean // NOWE - określa tryb: rejoin vs create
+    ownHouseholdName?: string // NOWE - nazwa własnego gospodarstwa (dla rejoin)
     onOpenChange: (open: boolean) => void
-    onSuccess: (newHousehold: Household) => void
+    onSuccess: (household: Household, rejoined: boolean) => void
   }
   ```
 
@@ -388,6 +400,8 @@ type HouseholdRole = 'owner' | 'member'
 interface HouseholdDashboardViewModel {
   household: HouseholdWithMembers | null
   userRole: HouseholdRole | null
+  ownedHousehold: Household | null // NOWE - własne gospodarstwo użytkownika (jeśli ma)
+  hasOwnHousehold: boolean // NOWE - czy użytkownik posiada własne gospodarstwo
   isLoading: boolean
   error: string | null
 }
@@ -406,11 +420,12 @@ interface EditHouseholdNameFormData {
   error: string | null
 }
 
-// Stan formularza tworzenia gospodarstwa
-interface CreateHouseholdFormData {
-  name: string
+// Stan formularza powrotu/tworzenia gospodarstwa
+interface ReturnOrCreateHouseholdFormData {
+  name?: string // ZMIENIONE - opcjonalne, wymagane tylko dla create
   isSubmitting: boolean
   error: string | null
+  mode: 'rejoin' | 'create' // NOWE - tryb operacji
 }
 
 // NIEUŻYWANE W OBECNEJ WERSJI (przyszłość):
@@ -450,6 +465,8 @@ interface HouseholdError {
 const [viewModel, setViewModel] = useState<HouseholdDashboardViewModel>({
   household: null,
   userRole: null,
+  ownedHousehold: null, // NOWE
+  hasOwnHousehold: false, // NOWE
   isLoading: true,
   error: null,
 })
@@ -457,7 +474,7 @@ const [viewModel, setViewModel] = useState<HouseholdDashboardViewModel>({
 // Stany modali (każdy modal kontrolowany osobnym stanem)
 // Uwaga: brak modali dla zaproszeń i usuwania członków w obecnej wersji
 const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false)
-const [isCreateOwnModalOpen, setIsCreateOwnModalOpen] = useState(false)
+const [isReturnOrCreateModalOpen, setIsReturnOrCreateModalOpen] = useState(false) // ZMIENIONE
 const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 ```
 
@@ -478,20 +495,28 @@ function useHouseholdDashboard(): UseHouseholdDashboardReturn {
   // Pobranie danych gospodarstwa
   const fetchHousehold = useCallback(async () => { ... })
 
+  // NOWE - Pobranie informacji o posiadanym gospodarstwie
+  const fetchOwnedHousehold = useCallback(async () => {
+    // GET /api/households/owned lub logika w głównym fetch
+  })
+
   // Odświeżenie danych
   const refresh = useCallback(async () => {
     await fetchHousehold()
+    await fetchOwnedHousehold()  // NOWE
   })
 
   // Inicjalizacja przy montowaniu
   useEffect(() => {
     fetchHousehold()
+    fetchOwnedHousehold()        // NOWE
   }, [])
 
   return {
     viewModel,
     refresh,
     fetchHousehold,
+    fetchOwnedHousehold,         // NOWE
   }
 }
 
@@ -528,21 +553,25 @@ function useHouseholdActions(
     // DELETE /api/households/{householdId}
   })
 
-  const createOwnHousehold = useCallback(async (name: string): Promise<Household> => {
-    // POST /api/households
-  })
+  const returnOrCreateHousehold = useCallback(
+    async (name?: string): Promise<{ household: Household; rejoined: boolean }> => {
+      // ZMIENIONE - POST /api/households (z opcjonalną nazwą)
+      // Jeśli user ma własne gospodarstwo → rejoin (name ignorowane)
+      // Jeśli user nie ma własnego → create (name wymagane)
+    }
+  )
 
   return {
     updateName,
     deleteHousehold,
-    createOwnHousehold,
+    returnOrCreateHousehold, // ZMIENIONE z createOwnHousehold
   }
 }
 
 interface UseHouseholdActionsReturn {
   updateName: (name: string) => Promise<void>
   deleteHousehold: () => Promise<void>
-  createOwnHousehold: (name: string) => Promise<Household>
+  returnOrCreateHousehold: (name?: string) => Promise<{ household: Household; rejoined: boolean }> // ZMIENIONE
 }
 ```
 
@@ -806,33 +835,40 @@ type Response = MembersListResponse
 - Walidacja: nazwa 3-50 znaków, wymagana
 - Obsługa błędów: 400 (walidacja), 403 (nie właściciel), 404
 
-### 3. Utworzenie własnego gospodarstwa (tylko członek)
+### 3. Powrót do własnego gospodarstwa lub utworzenie nowego (tylko członek)
 
-**Użytkownik:** Klika "Utwórz własne gospodarstwo"
+**Użytkownik:** Klika "Return to My Household" lub "Create Own Household" (tekst zależny od sytuacji)
 
 **System:**
 
-1. Otwiera `CreateOwnHouseholdModal`
-2. Wyświetla ostrzeżenie: "Opuścisz obecne gospodarstwo: {name}"
-3. Użytkownik wprowadza nazwę nowego gospodarstwa
-4. Walidacja na poziomie UI
-5. Po kliknięciu "Utwórz":
-   - Wywołanie `POST /api/households`
-   - Loading state
-6. Po sukcesie:
+1. Otwiera `ReturnOrCreateHouseholdModal`
+2. Wyświetla ostrzeżenie: "Opuścisz obecne gospodarstwo: {currentHouseholdName}"
+3. **Jeśli user MA własne gospodarstwo (rejoin):**
+   - Wyświetla: "Wrócisz do: {ownHouseholdName}"
+   - Brak inputu dla nazwy
+   - Przycisk: "Return to My Household"
+   - Po kliknięciu: `POST /api/households` (bez body lub z pustym name)
+4. **Jeśli user NIE MA własnego (create):**
+   - Wyświetla formularz z inputem dla nazwy
+   - Użytkownik wprowadza nazwę nowego gospodarstwa
+   - Walidacja na poziomie UI (nazwa 3-50 znaków)
+   - Przycisk: "Create Household"
+   - Po kliknięciu: `POST /api/households` (z name w body)
+5. Po sukcesie:
    - Zamknięcie modala
-   - Przekierowanie lub odświeżenie do nowego gospodarstwa
-   - Toast: "Utworzono nowe gospodarstwo"
-7. Po błędzie:
+   - Odświeżenie danych (refresh)
+   - Toast: "Wrócono do gospodarstwa" lub "Utworzono nowe gospodarstwo" (zależnie od rejoined flag)
+6. Po błędzie:
    - Wyświetlenie błędu
    - Modal pozostaje otwarty
 
 **Warunki:**
 
-- Przycisk widoczny tylko dla członków (nie właścicieli)
+- Przycisk widoczny tylko dla członków (nie właścicieli aktualnego gospodarstwa)
+- Tekst przycisku dynamiczny: zależy od `hasOwnHousehold`
 - Automatyczne opuszczenie poprzedniego gospodarstwa (API)
-- Walidacja: nazwa 3-50 znaków
-- Obsługa błędów: 400 (walidacja), 409 (już właściciel)
+- Walidacja: nazwa 3-50 znaków tylko dla create
+- Obsługa błędów: 400 (walidacja), 409 (już aktywny członek własnego)
 
 ### 4. Usunięcie gospodarstwa (tylko właściciel)
 
@@ -1377,12 +1413,14 @@ try {
    - Wyświetlanie błędów
    - Callbacks: onSuccess, onOpenChange
 
-2. Zaimplementować `CreateOwnHouseholdModal`:
+2. Zaimplementować `ReturnOrCreateHouseholdModal`:
    - Podobna struktura do EditHouseholdNameModal
    - Alert z ostrzeżeniem o opuszczeniu obecnego gospodarstwa
-   - Formularz z nazwą
-   - Walidacja
-   - Obsługa submit
+   - Warunkowa logika UI:
+     - Rejoin mode: tylko informacja o powrocie, brak inputu
+     - Create mode: formularz z nazwą
+   - Walidacja warunkowa (tylko dla create)
+   - Obsługa submit (z nazwą lub bez)
 
 3. Zaimplementować `DeleteHouseholdModal`:
    - AlertDialog (destructive variant)
@@ -1412,7 +1450,7 @@ try {
 
    ```typescript
    const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false)
-   const [isCreateOwnModalOpen, setIsCreateOwnModalOpen] = useState(false)
+   const [isReturnOrCreateModalOpen, setIsReturnOrCreateModalOpen] = useState(false) // ZMIENIONE
    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
    // Uwaga: brak modali dla zaproszeń i usuwania członków
    ```
@@ -1433,7 +1471,11 @@ try {
 
      {/* Modals */}
      <EditHouseholdNameModal ... />
-     <CreateOwnHouseholdModal ... />
+     <ReturnOrCreateHouseholdModal
+       hasOwnHousehold={viewModel.hasOwnHousehold}
+       ownHouseholdName={viewModel.ownedHousehold?.name}
+       ...
+     />
      <DeleteHouseholdModal ... />
    </div>
    ```
@@ -1441,11 +1483,18 @@ try {
    **Uwaga:** Brak `InvitationsList` i związanych modali
 
 6. Implementacja handlerów dla modali:
+
    ```typescript
    const handleEditNameSuccess = (updated: Household) => {
      setIsEditNameModalOpen(false)
      refresh()
      toast.success('Nazwa gospodarstwa została zmieniona')
+   }
+
+   const handleReturnOrCreateSuccess = (household: Household, rejoined: boolean) => {
+     setIsReturnOrCreateModalOpen(false)
+     refresh()
+     toast.success(rejoined ? 'Wrócono do gospodarstwa' : 'Utworzono nowe gospodarstwo')
    }
    // ... podobne dla innych akcji
    ```

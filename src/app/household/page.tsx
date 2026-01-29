@@ -13,10 +13,10 @@ import {
   HouseholdInfoCard,
   MembersList,
   EditHouseholdNameModal,
-  CreateOwnHouseholdModal,
+  ReturnOrCreateHouseholdModal,
   HouseholdInvitationsSection,
 } from './components'
-import type { Household } from '@/types/types'
+import type { Household, CreateHouseholdResponse } from '@/types/types'
 
 /**
  * Household Dashboard Page
@@ -36,7 +36,7 @@ export default function HouseholdPage(): JSX.Element {
 
   // Modal states
   const [isEditNameModalOpen, setIsEditNameModalOpen] = useState(false)
-  const [isCreateOwnModalOpen, setIsCreateOwnModalOpen] = useState(false)
+  const [isReturnOrCreateModalOpen, setIsReturnOrCreateModalOpen] = useState(false)
 
   // Success message state
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -55,12 +55,15 @@ export default function HouseholdPage(): JSX.Element {
     [updateHouseholdName]
   )
 
-  // Handler: Create own household success
-  const handleCreateOwnSuccess = useCallback(
-    (newHousehold: Household) => {
-      setIsCreateOwnModalOpen(false)
-      setSuccessMessage(`Created new household: ${newHousehold.name}`)
-      // Full refresh needed - switching to completely new household
+  // Handler: Return or create household success
+  const handleReturnOrCreateSuccess = useCallback(
+    (result: CreateHouseholdResponse) => {
+      setIsReturnOrCreateModalOpen(false)
+      const message = result.rejoined
+        ? `Returned to household: ${result.name}`
+        : `Created new household: ${result.name}`
+      setSuccessMessage(message)
+      // Full refresh needed - switching to different household
       refresh()
 
       // Clear success message after 5 seconds
@@ -99,14 +102,18 @@ export default function HouseholdPage(): JSX.Element {
         <EmptyState
           title="No Household Found"
           description="You are not a member of any household. Create your own household to get started."
-          action={<Button onClick={() => setIsCreateOwnModalOpen(true)}>Create Household</Button>}
+          action={
+            <Button onClick={() => setIsReturnOrCreateModalOpen(true)}>Create Household</Button>
+          }
         />
 
-        <CreateOwnHouseholdModal
-          open={isCreateOwnModalOpen}
+        <ReturnOrCreateHouseholdModal
+          open={isReturnOrCreateModalOpen}
           currentHouseholdName=""
-          onOpenChange={setIsCreateOwnModalOpen}
-          onSuccess={handleCreateOwnSuccess}
+          hasOwnHousehold={viewModel.hasOwnHousehold}
+          ownHouseholdName={viewModel.ownedHousehold?.name}
+          onOpenChange={setIsReturnOrCreateModalOpen}
+          onSuccess={handleReturnOrCreateSuccess}
         />
       </div>
     )
@@ -135,8 +142,13 @@ export default function HouseholdPage(): JSX.Element {
       <HouseholdHeader
         household={viewModel.household}
         userRole={viewModel.userRole}
+        hasOwnHousehold={viewModel.hasOwnHousehold}
+        ownHouseholdName={viewModel.ownedHousehold?.name}
         onEditName={() => setIsEditNameModalOpen(true)}
-        onCreateOwn={() => setIsCreateOwnModalOpen(true)}
+        onReturnOrCreate={() => setIsReturnOrCreateModalOpen(true)}
+        onDelete={() => {
+          /* TODO: implement delete */
+        }}
       />
 
       {/* Household info card */}
@@ -165,11 +177,13 @@ export default function HouseholdPage(): JSX.Element {
         onSuccess={handleEditNameSuccess}
       />
 
-      <CreateOwnHouseholdModal
-        open={isCreateOwnModalOpen}
+      <ReturnOrCreateHouseholdModal
+        open={isReturnOrCreateModalOpen}
         currentHouseholdName={viewModel.household.name}
-        onOpenChange={setIsCreateOwnModalOpen}
-        onSuccess={handleCreateOwnSuccess}
+        hasOwnHousehold={viewModel.hasOwnHousehold}
+        ownHouseholdName={viewModel.ownedHousehold?.name}
+        onOpenChange={setIsReturnOrCreateModalOpen}
+        onSuccess={handleReturnOrCreateSuccess}
       />
     </div>
   )

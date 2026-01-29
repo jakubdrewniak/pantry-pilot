@@ -28,10 +28,10 @@ export class NotOwnerError extends Error {
   }
 }
 
-export class AlreadyOwnerError extends Error {
-  constructor(message = 'Already own a household') {
+export class AlreadyActiveMemberError extends Error {
+  constructor(message = 'Already an active member of own household') {
     super(message)
-    this.name = 'AlreadyOwnerError'
+    this.name = 'AlreadyActiveMemberError'
   }
 }
 
@@ -146,6 +146,65 @@ export class HouseholdService {
   }
 
   /**
+   * Get the ID of household that user owns (by owner_id)
+   * This is different from getUserMembership which returns current active membership
+   *
+   * @param userId - The user UUID
+   * @returns Household ID that user owns, or null if user doesn't own any household
+   */
+  async getOwnedHouseholdId(userId: string): Promise<string | null> {
+    const { data, error } = await this.supabase
+      .from('households')
+      .select('id')
+      .eq('owner_id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[HouseholdService] Error fetching owned household:', error)
+      return null
+    }
+
+    return data?.id ?? null
+  }
+
+  /**
+   * Get the household that user owns (by owner_id)
+   * This is different from getUserHousehold which returns current active membership
+   *
+   * @param userId - The user UUID
+   * @returns Household DTO that user owns, or null if user doesn't own any household
+   */
+  async getOwnedHousehold(userId: string): Promise<Household | null> {
+    const { data: household, error } = await this.supabase
+      .from('households')
+      .select('id, name, created_at')
+      .eq('owner_id', userId)
+      .maybeSingle()
+
+    if (error) {
+      console.error('[HouseholdService] Error fetching owned household:', error)
+      return null
+    }
+
+    if (!household) {
+      return null
+    }
+
+    // Count members
+    const { count } = await this.supabase
+      .from('user_households')
+      .select('*', { count: 'exact', head: true })
+      .eq('household_id', household.id)
+
+    return {
+      id: household.id,
+      name: household.name,
+      createdAt: household.created_at,
+      memberCount: count ?? 0,
+    }
+  }
+
+  /**
    * Get the household that the user belongs to
    *
    * @param userId - The authenticated user's UUID
@@ -212,38 +271,101 @@ export class HouseholdService {
   }
 
   /**
-   * Create a new household for the user
+   * Rejoin owned household or create a new one
    *
    * Business rules:
-   * - User cannot create a household if they already own one (409 Conflict)
-   * - User can create a household if they are a member of someone else's household
-   * - Creating a new household automatically removes user from previous household
+   * - User cannot rejoin if they are already an active member of their own household (409 Conflict)
+   * - If user owns a household (by owner_id) → rejoin it (remove from current, add to owned)
+   * - If user doesn't own a household → create new one
+   * - Operation automatically removes user from current household
    *
    * @param userId - The authenticated user's UUID
-   * @param name - The household name (validated by Zod schema)
-   * @returns The created Household DTO
-   * @throws AlreadyOwnerError if user already owns a household
+   * @param name - The household name (optional - only required when creating new)
+   * @returns Object with household DTO and rejoined flag
+   * @throws AlreadyActiveMemberError if user is already an active member of their own household
    *
    * Flow:
-   * 1. Check if user is already an owner → throw error
-   * 2. Check if user is a member of another household → save for cleanup
-   * 3. BEGIN TRANSACTION:
-   *    - Create new household with user as owner
-   *    - Add user to user_households
-   *    - Create pantry for household
-   *    - Create shopping_list for household
-   *    - Remove user from previous household (if any)
-   * 4. Return created household
+   * 1. Check if user owns a household (by owner_id)
+   * 2. Check if user is already active member of owned household → throw error
+   * 3. Get current membership (if any)
+   * 4. IF user owns household:
+   *    - Remove from current household
+   *    - Add to owned household
+   *    - Return { household, rejoined: true }
+   * 5. ELSE (user doesn't own household):
+   *    - Validate name is provided
+   *    - Create new household
+   *    - Return { household, rejoined: false }
    */
-  async createHousehold(userId: string, name: string): Promise<Household> {
+  async rejoinOrCreateHousehold(
+    userId: string,
+    name?: string
+  ): Promise<{ household: Household; rejoined: boolean }> {
+    // Check if user owns a household
+    const ownedHousehold = await this.getOwnedHousehold(userId)
+
     // Check current membership
     const membership = await this.getUserMembership(userId)
 
-    if (membership?.isOwner) {
-      throw new AlreadyOwnerError()
+    // If user owns household and is already active member of it → error
+    if (ownedHousehold && membership?.householdId === ownedHousehold.id) {
+      throw new AlreadyActiveMemberError()
     }
 
-    const previousHouseholdId = membership?.householdId ?? null
+    const currentHouseholdId = membership?.householdId ?? null
+
+    // SCENARIO 1: User owns a household → REJOIN
+    if (ownedHousehold) {
+      console.log('[HouseholdService] User owns household, rejoining:', ownedHousehold.id)
+
+      // Remove from current household (if any)
+      if (currentHouseholdId) {
+        const { error: removeError } = await this.supabase
+          .from('user_households')
+          .delete()
+          .eq('user_id', userId)
+          .eq('household_id', currentHouseholdId)
+
+        if (removeError) {
+          console.error('[HouseholdService] Error removing from current household:', removeError)
+          throw new Error('Failed to leave current household')
+        }
+      }
+
+      // Add to owned household
+      const { error: addError } = await this.supabase
+        .from('user_households')
+        .insert({
+          user_id: userId,
+          household_id: ownedHousehold.id,
+        })
+        .select()
+        .single()
+
+      if (addError) {
+        console.error('[HouseholdService] Error rejoining owned household:', addError)
+        // Rollback: re-add to previous household if we removed them
+        if (currentHouseholdId) {
+          await this.supabase.from('user_households').insert({
+            user_id: userId,
+            household_id: currentHouseholdId,
+          })
+        }
+        throw new Error('Failed to rejoin household')
+      }
+
+      return {
+        household: ownedHousehold,
+        rejoined: true,
+      }
+    }
+
+    // SCENARIO 2: User doesn't own a household → CREATE NEW
+    console.log('[HouseholdService] User does not own household, creating new')
+
+    if (!name) {
+      throw new Error('Name is required when creating a new household')
+    }
 
     // Create new household
     const { data: household, error: householdError } = await this.supabase
@@ -301,12 +423,12 @@ export class HouseholdService {
     }
 
     // Remove user from previous household if they were a member
-    if (previousHouseholdId) {
+    if (currentHouseholdId) {
       const { error: removeError } = await this.supabase
         .from('user_households')
         .delete()
         .eq('user_id', userId)
-        .eq('household_id', previousHouseholdId)
+        .eq('household_id', currentHouseholdId)
 
       if (removeError) {
         console.error('[HouseholdService] Error removing from previous household:', removeError)
@@ -316,9 +438,12 @@ export class HouseholdService {
     }
 
     return {
-      id: household.id,
-      name: household.name,
-      createdAt: household.created_at,
+      household: {
+        id: household.id,
+        name: household.name,
+        createdAt: household.created_at,
+      },
+      rejoined: false,
     }
   }
 

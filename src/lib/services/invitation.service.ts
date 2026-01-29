@@ -427,31 +427,15 @@ export class InvitationService {
         throw new Error('Failed to leave current household')
       }
 
-      // If user was the owner, check if household is now empty and delete it
-      if (currentHousehold && currentHousehold.owner_id === userId) {
-        const { data: remainingMembers } = await this.supabase
-          .from('user_households')
-          .select('user_id')
-          .eq('household_id', currentHousehold.id)
-          .limit(1)
-
-        // If no remaining members, delete the household (cascade will handle related records)
-        if (!remainingMembers || remainingMembers.length === 0) {
-          const { error: deleteHouseholdError } = await this.supabase
-            .from('households')
-            .delete()
-            .eq('id', currentHousehold.id)
-
-          if (deleteHouseholdError) {
-            console.error(
-              '[InvitationService] Error deleting empty household:',
-              deleteHouseholdError
-            )
-            // Don't fail the invitation acceptance if household cleanup fails
-            // The user has already left, so they can still join the new household
-          }
-        }
-      }
+      // NOTE: We DO NOT delete the household even if user was the owner and it becomes empty
+      // This allows the owner to rejoin their household later using the "Return to My Household" feature
+      // The household remains in the database with owner_id intact but no active members
+      console.log(
+        '[InvitationService] User left household:',
+        currentHousehold?.id,
+        'Owner:',
+        currentHousehold?.owner_id === userId
+      )
     }
 
     // Create membership record for the new household

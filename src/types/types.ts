@@ -146,7 +146,7 @@ export interface ChangePasswordRequest {
 
 // Household Commands
 export interface CreateHouseholdRequest {
-  name: string
+  name?: string // Optional - required only when creating new household (not when rejoining)
 }
 
 export interface InviteMemberRequest {
@@ -234,9 +234,12 @@ export interface ChangePasswordResponse {
 // Household Responses
 export interface HouseholdsListResponse {
   data: Household[]
+  ownedHouseholdId: string | null // ID of household user owns (may differ from current membership)
 }
 
-export type CreateHouseholdResponse = Household
+export interface CreateHouseholdResponse extends Household {
+  rejoined: boolean // true if rejoined existing household, false if created new
+}
 
 export type GetHouseholdResponse = HouseholdWithMembers
 
@@ -340,6 +343,8 @@ export type HouseholdRole = 'owner' | 'member'
 export interface HouseholdDashboardViewModel {
   household: HouseholdWithMembers | null
   userRole: HouseholdRole | null
+  ownedHousehold: Household | null // Household user owns (if any)
+  hasOwnHousehold: boolean // Whether user owns a household
   isLoading: boolean
   error: string | null
 }
@@ -358,11 +363,12 @@ export interface EditHouseholdNameFormData {
   error: string | null
 }
 
-// Create household form state
-export interface CreateHouseholdFormData {
-  name: string
+// Return or create household form state
+export interface ReturnOrCreateHouseholdFormData {
+  name?: string // Optional - required only for create mode
   isSubmitting: boolean
   error: string | null
+  mode: 'rejoin' | 'create' // Operation mode
 }
 
 // API errors mapped to user-friendly messages

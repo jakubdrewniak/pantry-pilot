@@ -19,6 +19,8 @@ export function useHouseholdDashboard() {
   const [viewModel, setViewModel] = useState<HouseholdDashboardViewModel>({
     household: null,
     userRole: null,
+    ownedHousehold: null,
+    hasOwnHousehold: false,
     isLoading: true,
     error: null,
   })
@@ -49,12 +51,33 @@ export function useHouseholdDashboard() {
 
       const householdsData: HouseholdsListResponse = await householdsResponse.json()
       const household = householdsData.data[0] ?? null
+      const ownedHouseholdId = householdsData.ownedHouseholdId
+
+      // Fetch owned household details if user owns one
+      let ownedHousehold = null
+      if (ownedHouseholdId && ownedHouseholdId !== household?.id) {
+        try {
+          const ownedResponse = await fetch(`/api/households/${ownedHouseholdId}`, {
+            method: 'GET',
+            credentials: 'include',
+          })
+          if (ownedResponse.ok) {
+            ownedHousehold = await ownedResponse.json()
+          }
+        } catch (error) {
+          console.error('[useHouseholdDashboard] Failed to fetch owned household:', error)
+        }
+      }
+
+      const hasOwnHousehold = ownedHouseholdId !== null && ownedHouseholdId !== household?.id
 
       // If user has no household
       if (!household) {
         setViewModel({
           household: null,
           userRole: null,
+          ownedHousehold,
+          hasOwnHousehold,
           isLoading: false,
           error: null,
         })
@@ -85,6 +108,8 @@ export function useHouseholdDashboard() {
       setViewModel({
         household: householdDetails,
         userRole,
+        ownedHousehold,
+        hasOwnHousehold,
         isLoading: false,
         error: null,
       })
@@ -103,6 +128,8 @@ export function useHouseholdDashboard() {
       setViewModel({
         household: null,
         userRole: null,
+        ownedHousehold: null,
+        hasOwnHousehold: false,
         isLoading: false,
         error: errorMessage,
       })
