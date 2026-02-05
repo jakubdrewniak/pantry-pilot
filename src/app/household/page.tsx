@@ -26,7 +26,6 @@ import type { Household, CreateHouseholdResponse } from '@/types/types'
  * - View household details and members
  * - Edit household name (owner only)
  * - Create own household (member only)
- * - Delete household (owner only, no other members)
  *
  * Note: Invitation functionality not implemented in current version
  */
@@ -146,9 +145,6 @@ export default function HouseholdPage(): JSX.Element {
         ownHouseholdName={viewModel.ownedHousehold?.name}
         onEditName={() => setIsEditNameModalOpen(true)}
         onReturnOrCreate={() => setIsReturnOrCreateModalOpen(true)}
-        onDelete={() => {
-          /* TODO: implement delete */
-        }}
       />
 
       {/* Household info card */}

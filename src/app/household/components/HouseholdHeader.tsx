@@ -9,7 +9,6 @@ interface HouseholdHeaderProps {
   ownHouseholdName?: string
   onEditName: () => void
   onReturnOrCreate: () => void
-  onDelete: () => void
 }
 
 /**
@@ -24,7 +23,6 @@ export function HouseholdHeader({
   ownHouseholdName,
   onEditName,
   onReturnOrCreate,
-  onDelete,
 }: HouseholdHeaderProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -35,7 +33,6 @@ export function HouseholdHeader({
         ownHouseholdName={ownHouseholdName}
         onEditName={onEditName}
         onReturnOrCreate={onReturnOrCreate}
-        onDelete={onDelete}
       />
     </div>
   )

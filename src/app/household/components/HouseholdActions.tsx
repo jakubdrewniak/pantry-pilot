@@ -7,12 +7,11 @@ interface HouseholdActionsProps {
   ownHouseholdName?: string
   onEditName: () => void
   onReturnOrCreate: () => void
-  onDelete: () => void
 }
 
 /**
  * Action buttons group with role-based visibility
- * - Owner: Edit name, Delete household
+ * - Owner: Edit name
  * - Member: Return to own household OR Create new household (dynamic text)
  */
 export function HouseholdActions({
@@ -20,19 +19,13 @@ export function HouseholdActions({
   hasOwnHousehold,
   onEditName,
   onReturnOrCreate,
-  onDelete,
 }: HouseholdActionsProps) {
   return (
     <div className="flex flex-wrap gap-2">
       {userRole === 'owner' && (
-        <>
-          <Button variant="outline" onClick={onEditName}>
-            Edit Name
-          </Button>
-          <Button variant="destructive" onClick={onDelete}>
-            Delete Household
-          </Button>
-        </>
+        <Button variant="outline" onClick={onEditName}>
+          Edit Name
+        </Button>
       )}
       {userRole === 'member' && (
         <Button variant="default" onClick={onReturnOrCreate}>
