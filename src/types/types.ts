@@ -475,3 +475,109 @@ export interface UseRecipeEditorReturn {
   validateField: (field: string) => void
   resetForm: () => void
 }
+
+// ============================================================================
+// PANTRY VIEW TYPES (View Models)
+// ============================================================================
+
+/**
+ * ViewModel for Pantry page view
+ * Used in: PantryPage
+ */
+export interface PantryViewModel {
+  pantry: PantryWithItems | null // Pantry data with items
+  isLoading: boolean // Whether data is being loaded
+  error: string | null // Error message (if any)
+}
+
+/**
+ * ViewModel for add item form
+ * Used in: AddItemDialog
+ */
+export interface AddItemFormData {
+  name: string // Item name
+  quantity: number // Quantity (default 1)
+  unit: string // Unit (can be empty string)
+  isSubmitting: boolean // Whether form is being submitted
+  error: string | null // Error message (validation or API)
+}
+
+/**
+ * ViewModel for edit item form
+ * Used in: EditItemDialog
+ */
+export interface EditItemFormData {
+  itemId: string // Item ID (for identification)
+  itemName: string // Item name (readonly, for display)
+  quantity: number // New quantity
+  unit: string // New unit
+  isSubmitting: boolean // Whether form is being submitted
+  error: string | null // Error message
+}
+
+/**
+ * ViewModel for delete item dialog
+ * Used in: DeleteConfirmationDialog
+ */
+export interface DeleteItemData {
+  itemId: string // Item ID to delete
+  itemName: string // Item name (for display in confirmation)
+  isDeleting: boolean // Whether deletion is in progress
+  error: string | null // Error message (if any)
+}
+
+/**
+ * Validation errors for add item form
+ */
+export interface AddItemFormErrors {
+  name?: string // Name field error
+  quantity?: string // Quantity field error
+  unit?: string // Unit field error
+  general?: string // General error (e.g. duplicate from API)
+}
+
+/**
+ * Validation errors for edit item form
+ */
+export interface EditItemFormErrors {
+  quantity?: string // Quantity field error
+  unit?: string // Unit field error
+  general?: string // General error (e.g. from API)
+}
+
+/**
+ * Return type from usePantry hook
+ */
+export interface UsePantryReturn {
+  pantry: PantryWithItems | null
+  isLoading: boolean
+  error: Error | null
+  refetch: () => Promise<void>
+}
+
+/**
+ * Return type from useAddPantryItems hook
+ */
+export interface UseAddPantryItemsReturn {
+  addItems: (items: AddPantryItemsRequest['items']) => Promise<PantryItem[]>
+  isLoading: boolean
+  error: Error | null
+}
+
+/**
+ * Return type from useUpdatePantryItem hook
+ */
+export interface UseUpdatePantryItemReturn {
+  updateItem: (itemId: string, data: UpdatePantryItemRequest) => Promise<PantryItem>
+  isLoading: boolean
+  error: Error | null
+}
+
+/**
+ * Return type from useDeletePantryItem hook
+ */
+export interface UseDeletePantryItemReturn {
+  deleteItem: (itemId: string) => Promise<void>
+  isLoading: boolean
+  error: Error | null
+}
