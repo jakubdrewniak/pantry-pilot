@@ -39,11 +39,13 @@ Many individuals waste time and food because they are unsure what to cook with i
    - Users can generate a shopping list from selected recipes or add list manually.
    - Users can mark items as purchased and transfer them to the pantry.
    - Users can remove items from the shopping list.
+   - Changes to the shopping list are synchronized in real time for all household members without page refresh.
 
 7. Collaboration
    - Users can invite collaborators via email to shared pantries and shopping lists.
    - Invited collaborators receive an email with a signup link.
-   - (Optional in MVP) Shared pantries and lists synchronize in real time for all collaborators.
+   - Shopping lists synchronize in real time for all household members—changes are visible immediately without page refresh.
+   - (Optional in MVP) Pantries may also support real-time synchronization.
 
 8. Data Deletion
    - Users receive a confirmation prompt before deleting recipes or pantry items.
@@ -57,7 +59,7 @@ In scope for MVP:
 - Manual pantry entry by name.
 - Markdown-only recipe editor without WYSIWYG features.
 - Basic search and meal-type filtering.
-- Real-time collaboration for pantries and shopping lists.
+- Real-time collaboration for shopping lists; pantries may sync in real time (optional).
 - Hard deletes with confirmation prompts.
 
 Out of scope for MVP:
@@ -188,8 +190,12 @@ Out of scope for MVP:
     - The invitee receives an email and, upon signup, sees shared pantries and lists.
 
 - US-017
-  - Title: Real-time collaboration
-  - Description: As a collaborator, I want to see updates to shared pantries and shopping lists in real time when real-time sync is enabled (optional in MVP).
+  - Title: Real-time shopping list collaboration
+  - Description: As a household member, I want to see updates to the shared shopping list in real time so that I can coordinate purchases with other members.
+  - Acceptance criteria:
+    - When another household member adds, removes, or marks an item as purchased, I see the change immediately without refreshing the page.
+    - Real-time updates work for all shopping list operations (add, remove, mark purchased, bulk operations).
+    - If my connection is temporarily lost, updates sync automatically when connection is restored.
 
 - US-018
   - Title: View recipe type badge

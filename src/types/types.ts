@@ -109,6 +109,7 @@ export interface ShoppingList {
   id: string
   householdId: string
   createdAt: string
+  updatedAt: string
 }
 
 export type ShoppingListWithItems = ShoppingList & {
@@ -122,6 +123,8 @@ export interface ShoppingListItem {
   shoppingListId: string
   unit: string | null
   isPurchased: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 // ============================================================================
@@ -210,6 +213,23 @@ export interface AddShoppingListItemsRequest {
 
 export interface MarkPurchasedRequest {
   isPurchased: boolean
+}
+
+// Update Shopping List Item (quantity, unit, or purchase status)
+export interface UpdateShoppingListItemRequest {
+  quantity?: number
+  unit?: string | null
+  isPurchased?: boolean
+}
+
+// Bulk Purchase Shopping List Items
+export interface BulkPurchaseItemsRequest {
+  itemIds: string[]
+}
+
+// Bulk Delete Shopping List Items
+export interface BulkDeleteItemsRequest {
+  itemIds: string[]
 }
 
 // ============================================================================
@@ -330,6 +350,44 @@ export interface AddShoppingListItemsResponse {
 export interface MarkPurchasedResponse {
   item: ShoppingListItem
   pantryItem: PantryItem
+}
+
+// Update Shopping List Item Response
+export interface UpdateShoppingListItemResponse {
+  item: ShoppingListItem
+  pantryItem?: PantryItem // Only present if item was purchased and transferred
+}
+
+// Bulk Purchase Items Response
+export interface BulkPurchaseItemsResponse {
+  purchased: string[] // IDs of successfully purchased items
+  transferred: Array<{
+    itemId: string
+    pantryItemId: string
+  }>
+  failed: Array<{
+    itemId: string
+    reason: string
+  }>
+  summary: {
+    total: number
+    successful: number
+    failed: number
+  }
+}
+
+// Bulk Delete Items Response
+export interface BulkDeleteItemsResponse {
+  deleted: string[] // IDs of successfully deleted items
+  failed: Array<{
+    itemId: string
+    reason: string
+  }>
+  summary: {
+    total: number
+    successful: number
+    failed: number
+  }
 }
 
 // ============================================================================
@@ -580,4 +638,51 @@ export interface UseDeletePantryItemReturn {
   deleteItem: (itemId: string) => Promise<void>
   isLoading: boolean
   error: Error | null
+}
+
+// ============================================================================
+// SUPABASE REALTIME TYPES (Shopping List Collaboration)
+// ============================================================================
+
+/**
+ * Supabase Realtime event types for CDC (Change Data Capture)
+ */
+export type RealtimeEventType = 'INSERT' | 'UPDATE' | 'DELETE'
+
+/**
+ * Payload structure for Supabase Realtime postgres_changes events
+ */
+export interface RealtimePayload<T = any> {
+  eventType: RealtimeEventType
+  new: T // New row data (for INSERT and UPDATE)
+  old: T // Old row data (for UPDATE and DELETE, if REPLICA IDENTITY FULL)
+  errors: string[] | null
+  schema: string
+  table: string
+  commit_timestamp: string
+}
+
+/**
+ * Shopping list item realtime event payload
+ */
+export type ShoppingListItemRealtimePayload = RealtimePayload<ShoppingListItem>
+
+/**
+ * Hook return type for useShoppingListRealtime
+ */
+export interface UseShoppingListRealtimeReturn {
+  isConnected: boolean
+  connectionStatus: 'connecting' | 'connected' | 'disconnected' | 'error'
+  error: Error | null
+}
+
+/**
+ * Configuration for shopping list realtime subscription
+ */
+export interface ShoppingListRealtimeConfig {
+  shoppingListId: string
+  onInsert?: (item: ShoppingListItem) => void
+  onUpdate?: (item: ShoppingListItem, oldItem?: ShoppingListItem) => void
+  onDelete?: (item: ShoppingListItem) => void
+  onError?: (error: Error) => void
 }

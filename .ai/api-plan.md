@@ -638,14 +638,18 @@
 
 ### Shopping Lists & Items
 
-| Method | Path                                        | Description                         | Body/Query              | Response           |
-| ------ | ------------------------------------------- | ----------------------------------- | ----------------------- | ------------------ |
-| GET    | /api/households/{householdId}/shopping-list | Get or create shopping list         | (Auth header)           | `200 shoppingList` |
-| POST   | /api/shopping-lists/generate                | Generate from recipes               | `{ recipeIds[] }`       | `201 [item]`       |
-| GET    | /api/shopping-lists/{listId}/items          | List items                          | (Auth header)           | `200 [item]`       |
-| POST   | /api/shopping-lists/{listId}/items          | Add manual items (array)            | `{ items[] }`           | `201 [item]`       |
-| PATCH  | /api/shopping-lists/{listId}/items/{itemId} | Mark purchased & transfer to pantry | `{ isPurchased: true }` | `200 item`         |
-| DELETE | /api/shopping-lists/{listId}/items/{itemId} | Remove item                         | (Auth header)           | `204`              |
+**Real-time Collaboration Support**: Shopping lists are designed for real-time collaboration among household members. All mutations (INSERT, UPDATE, DELETE) trigger Supabase Realtime events that clients can subscribe to via PostgreSQL Change Data Capture (CDC). Front-end applications should establish a subscription to `shopping_list_items` table filtered by `shopping_list_id` to receive instant updates without polling.
+
+| Method | Path                                             | Description                                       | Body/Query                           | Response                                 |
+| ------ | ------------------------------------------------ | ------------------------------------------------- | ------------------------------------ | ---------------------------------------- |
+| GET    | /api/households/{householdId}/shopping-list      | Get or create shopping list                       | (Auth header)                        | `200 shoppingList`                       |
+| POST   | /api/shopping-lists/generate                     | Generate from recipes                             | `{ recipeIds[] }`                    | `201 [item]`                             |
+| GET    | /api/shopping-lists/{listId}/items               | List items                                        | (Auth header)                        | `200 [item]`                             |
+| POST   | /api/shopping-lists/{listId}/items               | Add manual items (array)                          | `{ items[] }`                        | `201 [item]`                             |
+| PATCH  | /api/shopping-lists/{listId}/items/{itemId}      | Update item (quantity, unit, purchase)            | `{ quantity?, unit?, isPurchased? }` | `200 item`                               |
+| DELETE | /api/shopping-lists/{listId}/items/{itemId}      | Remove single item                                | (Auth header)                        | `204`                                    |
+| POST   | /api/shopping-lists/{listId}/items/bulk-purchase | Bulk mark items as purchased & transfer to pantry | `{ itemIds[] }`                      | `200 { purchased, transferred, failed }` |
+| DELETE | /api/shopping-lists/{listId}/items/bulk-delete   | Bulk delete items                                 | `{ itemIds[] }`                      | `200 { deleted, failed }`                |
 
 #### Detailed reference: Shopping list endpoints
 
@@ -660,16 +664,21 @@
     "id": "uuid",
     "householdId": "uuid",
     "createdAt": "2025-10-13T12:00:00Z",
+    "updatedAt": "2025-10-13T12:00:00Z",
     "items": []
   }
   ```
 - **Success Codes**: 200 OK
+- **Real-time Notes**:
+  - After retrieving the list, front-end should subscribe to Supabase Realtime channel: `shopping_list_items:shopping_list_id=eq.{listId}`
+  - Subscribe to events: `INSERT`, `UPDATE`, `DELETE` on `shopping_list_items` table
+  - Client receives automatic updates when any household member modifies items
 
 ##### Generate shopping list from recipes
 
 - **Method**: POST
 - **URL**: `/api/shopping-lists/generate`
-- **Description**: Populates a shopping list with ingredients needed for selected recipes.
+- **Description**: Populates a shopping list with ingredients needed for selected recipes. Triggers real-time notifications to all connected household members.
 - **Request Body**:
   ```json
   {
@@ -685,27 +694,57 @@
         "name": "Chicken",
         "quantity": 1,
         "unit": "kg",
-        "isPurchased": false
+        "isPurchased": false,
+        "createdAt": "2025-10-13T12:00:00Z"
       }
     ]
   }
   ```
 - **Success Codes**: 201 Created
+- **Error Codes**: 400 Bad Request (invalid recipe IDs), 404 Not Found (recipe not found)
 - **Validation / Business Logic Notes**:
   - Combines duplicate ingredients; sums quantities.
+  - Maximum 20 recipes per request to prevent abuse.
+  - All items are inserted atomically in a transaction.
+- **Real-time Notes**:
+  - Each inserted item triggers an `INSERT` event on Supabase Realtime
+  - Connected clients receive batch notifications for all new items
 
 ##### List shopping list items
 
 - **Method**: GET
 - **URL**: `/api/shopping-lists/{listId}/items`
-- **Description**: Lists items of a shopping list.
+- **Description**: Lists items of a shopping list with optional filtering.
+- **Query Parameters**:
+  - `isPurchased` (boolean, optional) – filter by purchase status
+  - `sort` (string, default `createdAt`) – sort by field (createdAt, name, isPurchased)
+- **Response Body**:
+  ```json
+  {
+    "data": [
+      {
+        "id": "uuid",
+        "shoppingListId": "uuid",
+        "name": "Milk",
+        "quantity": 2,
+        "unit": "L",
+        "isPurchased": false,
+        "createdAt": "2025-10-13T12:00:00Z",
+        "updatedAt": "2025-10-13T12:00:00Z"
+      }
+    ]
+  }
+  ```
 - **Success Codes**: 200 OK
+- **Real-time Notes**:
+  - This endpoint provides initial state; real-time updates come via Supabase subscription
+  - Use this for initial load, then rely on CDC events for updates
 
 ##### Add manual shopping list items
 
 - **Method**: POST
 - **URL**: `/api/shopping-lists/{listId}/items`
-- **Description**: Adds multiple custom items to the shopping list at once.
+- **Description**: Adds multiple custom items to the shopping list at once. Triggers real-time notifications.
 - **Request Body**:
   ```json
   {
@@ -719,43 +758,180 @@
   ```json
   {
     "items": [
-      { "id": "uuid", "name": "Milk", "quantity": 2, "unit": "L", "isPurchased": false },
-      { "id": "uuid", "name": "Eggs", "quantity": 12, "unit": "pcs", "isPurchased": false }
+      {
+        "id": "uuid",
+        "name": "Milk",
+        "quantity": 2,
+        "unit": "L",
+        "isPurchased": false,
+        "createdAt": "2025-10-13T12:00:00Z"
+      },
+      {
+        "id": "uuid",
+        "name": "Eggs",
+        "quantity": 12,
+        "unit": "pcs",
+        "isPurchased": false,
+        "createdAt": "2025-10-13T12:00:00Z"
+      }
     ]
   }
   ```
 - **Success Codes**: 201 Created
+- **Error Codes**: 400 Bad Request (invalid items), 409 Conflict (duplicate names)
 - **Validation / Business Logic Notes**:
-  - Duplicates are merged client-side before sending or rejected server-side with 409.
+  - Maximum 50 items per request to prevent abuse.
+  - Item names must be unique (case-insensitive) within the shopping list.
+  - If any duplicate is detected, entire batch is rejected (atomic operation).
+  - Empty item names are rejected.
+- **Real-time Notes**:
+  - Each inserted item triggers an `INSERT` event
+  - All household members see new items appear immediately
+  - Client should implement optimistic updates for better UX
 
-##### Mark item purchased and transfer to pantry
+##### Update shopping list item
 
 - **Method**: PATCH
 - **URL**: `/api/shopping-lists/{listId}/items/{itemId}`
-- **Description**: Sets `isPurchased=true`, removes from list, and moves to pantry.
-- **Request Body**:
+- **Description**: Updates item properties (quantity, unit, purchase status). Can also transfer purchased items to pantry.
+- **Request Body** (all fields optional):
   ```json
   {
+    "quantity": 3,
+    "unit": "L",
     "isPurchased": true
   }
   ```
 - **Response Body**:
   ```json
   {
-    "item": { "id": "uuid", "isPurchased": true },
-    "pantryItem": { "id": "uuid", "name": "Milk", "quantity": 2, "unit": "L" }
+    "item": {
+      "id": "uuid",
+      "name": "Milk",
+      "quantity": 3,
+      "unit": "L",
+      "isPurchased": true,
+      "updatedAt": "2025-10-13T12:30:00Z"
+    },
+    "pantryItem": {
+      "id": "uuid",
+      "name": "Milk",
+      "quantity": 3,
+      "unit": "L"
+    }
   }
   ```
 - **Success Codes**: 200 OK
+- **Error Codes**: 400 Bad Request (invalid values), 404 Not Found, 409 Conflict (name conflict in pantry)
 - **Validation / Business Logic Notes**:
-  - Executed inside a transaction.
+  - When `isPurchased` is set to `true`, item is automatically transferred to pantry via transaction.
+  - If item already exists in pantry (case-insensitive name match), quantities are merged.
+  - After successful pantry transfer, item is deleted from shopping list.
+  - Transaction ensures atomicity: both pantry insert and list item delete succeed or both fail.
+  - `quantity` must be >= 0.
+- **Real-time Notes**:
+  - Triggers `UPDATE` event if only quantity/unit changed
+  - Triggers `DELETE` event if item was purchased and removed from list
+  - Other household members see updates immediately
+  - Pantry updates are NOT real-time in MVP (optional future enhancement)
 
 ##### Remove shopping list item
 
 - **Method**: DELETE
 - **URL**: `/api/shopping-lists/{listId}/items/{itemId}`
-- **Description**: Deletes an item from the shopping list.
+- **Description**: Deletes an item from the shopping list. Triggers real-time notification.
 - **Success Codes**: 204 No Content
+- **Error Codes**: 404 Not Found, 401 Unauthorized
+- **Real-time Notes**:
+  - Triggers `DELETE` event on Supabase Realtime
+  - All connected household members see item disappear immediately
+  - Client should implement optimistic deletion for better UX
+
+##### Bulk purchase items
+
+- **Method**: POST
+- **URL**: `/api/shopping-lists/{listId}/items/bulk-purchase`
+- **Description**: Marks multiple items as purchased and transfers them to pantry in a single operation. Implements partial success pattern.
+- **Request Body**:
+  ```json
+  {
+    "itemIds": ["uuid1", "uuid2", "uuid3"]
+  }
+  ```
+- **Response Body**:
+  ```json
+  {
+    "purchased": ["uuid1", "uuid3"],
+    "transferred": [
+      { "itemId": "uuid1", "pantryItemId": "uuid-a" },
+      { "itemId": "uuid3", "pantryItemId": "uuid-b" }
+    ],
+    "failed": [
+      {
+        "itemId": "uuid2",
+        "reason": "Item not found or already purchased"
+      }
+    ],
+    "summary": {
+      "total": 3,
+      "successful": 2,
+      "failed": 1
+    }
+  }
+  ```
+- **Success Codes**: 200 OK (even with partial failures)
+- **Error Codes**: 400 Bad Request (invalid item IDs or empty array), 401 Unauthorized
+- **Validation / Business Logic Notes**:
+  - Accepts 1-50 item IDs per request (prevents abuse).
+  - Each item is processed independently; failures don't block others.
+  - For each item: marks as purchased, transfers to pantry (merging if exists), then deletes from list.
+  - Each item transfer is atomic (transaction per item).
+  - If pantry name conflict occurs, quantities are merged.
+  - Returns detailed results showing which items succeeded/failed.
+- **Real-time Notes**:
+  - Each successful purchase triggers a `DELETE` event for that item
+  - Multiple concurrent bulk operations are safe due to row-level locking
+  - All household members see items disappear as they're processed
+
+##### Bulk delete items
+
+- **Method**: DELETE
+- **URL**: `/api/shopping-lists/{listId}/items/bulk-delete`
+- **Description**: Removes multiple items from shopping list in a single request. Implements partial success pattern.
+- **Request Body**:
+  ```json
+  {
+    "itemIds": ["uuid1", "uuid2", "uuid3"]
+  }
+  ```
+- **Response Body**:
+  ```json
+  {
+    "deleted": ["uuid1", "uuid3"],
+    "failed": [
+      {
+        "itemId": "uuid2",
+        "reason": "Item not found"
+      }
+    ],
+    "summary": {
+      "total": 3,
+      "successful": 2,
+      "failed": 1
+    }
+  }
+  ```
+- **Success Codes**: 200 OK (even with partial failures)
+- **Error Codes**: 400 Bad Request (invalid item IDs or empty array), 401 Unauthorized
+- **Validation / Business Logic Notes**:
+  - Accepts 1-100 item IDs per request (prevents abuse).
+  - Non-existent items are reported in `failed` array.
+  - Each deletion is independent; some can succeed while others fail.
+  - Operation is idempotent: deleting already-deleted items returns success.
+- **Real-time Notes**:
+  - Each successful deletion triggers a `DELETE` event
+  - All household members see items disappear in real-time
+  - Race conditions handled by PostgreSQL row-level locking
 
 ---
 
@@ -782,6 +958,10 @@
 - **Empty pantry warning on AI generation**: `POST /recipes/generate` inspects pantry contents; if none, includes `X-Pantry-Empty: true` header and warning in body.
 - **AI error handling**: Errors from LLM return `503 Service Unavailable` with user-friendly JSON: `{ error: message }`.
 - **Transfer purchased items**: `PATCH /shopping-lists/{listId}/items/{itemId}` with `isPurchased=true` moves item to pantry via transaction; returns `200` with both updated item and new pantry item.
+- **Shopping list real-time sync**: All shopping list mutations (INSERT, UPDATE, DELETE on `shopping_list_items`) trigger Supabase Realtime events via PostgreSQL CDC. Front-end subscribes to channel `shopping_list_items:shopping_list_id=eq.{listId}` to receive instant updates.
+- **Bulk operations partial success**: Bulk purchase and bulk delete endpoints process items independently and return detailed results with both successful and failed operations. This allows the operation to continue even if some items fail.
+- **Optimistic concurrency**: While not using explicit version fields, PostgreSQL row-level locking prevents lost updates during concurrent modifications. Last write wins for quantity/unit updates.
+- **Conflict resolution for pantry transfer**: When purchasing an item that already exists in pantry (case-insensitive name match), quantities are summed and the shopping list item is removed.
 - **Confirmation prompts**: Delete endpoints are idempotent and return `204`; front-end must prompt user before calling.
 - **Recipe creation tracking**: Recipes track their creation method ('manual', 'ai_generated', 'ai_generated_modified') to distinguish between different sources.
 - **Search & Filter**: `GET /recipes` uses PostgreSQL GIN index on `content` for ingredient searches, BTREE index on `content->>'meal_type'` for meal type filtering, and BTREE index on `creation_method` for creation method filtering; supports full-text search on `title` and `content.ingredients`.
@@ -793,5 +973,84 @@ _Assumptions:_
 - Recipe creation methods limited to `['manual', 'ai_generated', 'ai_generated_modified']`.
 - Supabase client SDK manages real-time sync channels for front-end subscriptions.
 - All IDs are UUIDs and returned as strings.
+
+## 5. Real-time Collaboration Strategy (Shopping Lists)
+
+### Overview
+
+Shopping lists support real-time collaboration via Supabase Realtime, which uses PostgreSQL Change Data Capture (CDC) to broadcast database changes to connected clients. This eliminates the need for polling and ensures all household members see updates immediately.
+
+### Implementation Pattern
+
+#### Server-side (API Routes)
+
+1. All shopping list mutations use standard PostgreSQL operations (INSERT, UPDATE, DELETE)
+2. No additional code needed for real-time—Supabase CDC automatically captures changes
+3. Ensure RLS policies allow household members to read/write their shared shopping list
+4. Use transactions for multi-step operations (e.g., purchase → pantry transfer → delete)
+
+#### Client-side (React/Next.js)
+
+1. **Initial Load**: Call `GET /api/shopping-lists/{listId}/items` to fetch current state
+2. **Subscribe**: Establish Supabase Realtime channel:
+   ```typescript
+   const channel = supabase
+     .channel('shopping-list-changes')
+     .on(
+       'postgres_changes',
+       {
+         event: '*', // INSERT, UPDATE, DELETE
+         schema: 'public',
+         table: 'shopping_list_items',
+         filter: `shopping_list_id=eq.${listId}`,
+       },
+       payload => {
+         // Handle payload.eventType: INSERT, UPDATE, DELETE
+         // Update local state accordingly
+       }
+     )
+     .subscribe()
+   ```
+3. **Optimistic Updates**: For better UX, update local state immediately, then revert on API error
+4. **Cleanup**: Unsubscribe when component unmounts or user navigates away
+
+### Event Types and Handling
+
+| Event Type | Trigger                                | Client Action                       |
+| ---------- | -------------------------------------- | ----------------------------------- |
+| `INSERT`   | New item added (manual or from recipe) | Add item to local state             |
+| `UPDATE`   | Item quantity/unit/isPurchased changed | Update matching item in local state |
+| `DELETE`   | Item removed or purchased              | Remove item from local state        |
+
+### Conflict Resolution
+
+- **Last Write Wins**: PostgreSQL row-level locking ensures atomic updates
+- **Duplicate Prevention**: Unique constraint on `(shopping_list_id, LOWER(name))` prevents duplicates
+- **Quantity Merging**: When purchasing item that exists in pantry, server merges quantities
+- **Race Conditions**: If two users purchase the same item simultaneously, first transaction succeeds, second receives 404 (item already deleted)
+
+### Connection Management
+
+- **Reconnection**: Supabase client automatically reconnects on network interruption
+- **Sync on Reconnect**: After reconnection, client should call `GET /api/shopping-lists/{listId}/items` to sync missed changes
+- **Offline Support**: Not in MVP scope; mutations fail gracefully with error messages
+
+### Performance Considerations
+
+- **Channel Limit**: One channel per shopping list is sufficient for all household members
+- **Event Throttling**: Not required for MVP; shopping list mutations are infrequent
+- **Payload Size**: CDC events include full row data; no additional API calls needed for most updates
+
+### Security
+
+- **RLS Enforcement**: Row-level security policies ensure users only receive events for their household's shopping list
+- **JWT Validation**: Supabase validates JWT token on subscription; expired tokens are rejected
+- **Channel Authorization**: Front-end passes authenticated Supabase client; server-side RLS handles authorization
+
+### Testing Strategy
+
+- **Unit Tests**: Mock Supabase client and verify state updates on each event type
+- **Integration Tests**: Use Supabase test environment to verify real CDC events
+- **E2E Tests**: Open two browser windows, perform action in one, verify update appears in other within 1 second
 
 _End of API Plan._
