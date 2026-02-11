@@ -123,8 +123,6 @@ export interface ShoppingListItem {
   shoppingListId: string
   unit: string | null
   isPurchased: boolean
-  createdAt: string
-  updatedAt: string
 }
 
 // ============================================================================
