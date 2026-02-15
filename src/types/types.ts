@@ -684,3 +684,114 @@ export interface ShoppingListRealtimeConfig {
   onDelete?: (item: ShoppingListItem) => void
   onError?: (error: Error) => void
 }
+
+// ============================================================================
+// SHOPPING LIST VIEW TYPES (View Models)
+// ============================================================================
+
+/**
+ * Filter options for shopping list items
+ */
+export type FilterStatus = 'all' | 'purchased' | 'unpurchased'
+
+/**
+ * Sort options for shopping list items
+ */
+export type SortBy = 'name' | 'isPurchased'
+
+/**
+ * ViewModel for Shopping List page view
+ * Used in: ShoppingListPage
+ */
+export interface ShoppingListViewModel {
+  shoppingList: ShoppingListWithItems | null // Shopping list with items
+  filteredItems: ShoppingListItem[] // Items after applying filters
+  selectedItemIds: string[] // IDs of selected items (for bulk operations)
+  filterStatus: FilterStatus // Current filter: all | purchased | unpurchased
+  sortBy: SortBy // Current sort: name | isPurchased
+  isLoading: boolean // Whether data is being loaded
+  error: string | null // Error message (if any)
+}
+
+/**
+ * ViewModel for add item form (batch adding)
+ * Used in: AddItemForm
+ */
+export interface AddItemFormData {
+  name: string // Item name
+  quantity: number // Quantity (default: 1)
+  unit: string // Unit (can be empty string)
+  itemsToAdd: Array<{
+    // Local list of items before submitting
+    name: string
+    quantity: number
+    unit: string | null
+  }>
+  isSubmitting: boolean // Whether form is being submitted
+  error: string | null // Error message (validation or API)
+}
+
+/**
+ * Validation errors for add item form
+ */
+export interface AddItemFormErrors {
+  name?: string // Name field error
+  quantity?: string // Quantity field error
+  unit?: string // Unit field error
+  general?: string // General error (e.g. duplicate from API)
+}
+
+/**
+ * ViewModel for edit item form
+ * Used in: EditItemDialog
+ */
+export interface EditItemFormData {
+  itemId: string // Item ID (for identification)
+  itemName: string // Item name (readonly, for display)
+  quantity: number // New quantity
+  unit: string // New unit
+  isSubmitting: boolean // Whether form is being submitted
+  error: string | null // Error message
+}
+
+/**
+ * Validation errors for edit item form
+ */
+export interface EditItemFormErrors {
+  quantity?: string // Quantity field error
+  unit?: string // Unit field error
+  general?: string // General error (e.g. from API)
+}
+
+/**
+ * ViewModel for bulk purchase confirmation dialog
+ * Used in: BulkPurchaseConfirmDialog
+ */
+export interface BulkPurchaseDialogData {
+  selectedItems: ShoppingListItem[] // Selected items to purchase
+  isPurchasing: boolean // Whether operation is in progress
+  error: string | null // Error message (if any)
+}
+
+/**
+ * ViewModel for bulk delete confirmation dialog
+ * Used in: BulkDeleteConfirmDialog
+ */
+export interface BulkDeleteDialogData {
+  selectedItems: ShoppingListItem[] // Selected items to delete
+  isDeleting: boolean // Whether operation is in progress
+  error: string | null // Error message (if any)
+}
+
+/**
+ * ViewModel for generate from recipes dialog
+ * Used in: GenerateFromRecipesDialog
+ */
+export interface GenerateFromRecipesDialogData {
+  recipes: Recipe[] // List of available recipes
+  selectedRecipeIds: string[] // IDs of selected recipes
+  searchQuery: string // Search query
+  filteredRecipes: Recipe[] // Recipes after filtering
+  isGenerating: boolean // Whether generation is in progress
+  error: string | null // Error message (if any)
+}
