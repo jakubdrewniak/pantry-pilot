@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { SupabaseClient } from '@supabase/supabase-js'
 import { authenticateRequest } from '@/lib/api-auth'
 import { openRouter } from '@/lib/openrouter'
 import {
@@ -9,36 +10,16 @@ import {
 } from '@/lib/openrouter-service'
 import { RECIPE_GENERATION_SYSTEM_PROMPT, buildRecipeGenerationPrompt } from '@/lib/prompts'
 import { createRecipeResponseFormat } from '@/lib/recipe-schema-helper'
+import { PantryService, PantryNotFoundError } from '@/lib/services/pantry.service'
 import { RecipeSchema, GenerateRecipeRequestSchema } from '@/lib/validation/recipes'
+import type { Database } from '@/db/database.types'
 import type { GenerateRecipeResponse, Recipe } from '@/types/types'
-
-/**
- * Predefined pantry items for development/testing
- * TODO: Replace with actual database query when database is ready
- */
-const MOCK_PANTRY_ITEMS: Array<{ name: string; quantity: number; unit: string | null }> = [
-  { name: 'Eggs', quantity: 6, unit: 'pieces' },
-  { name: 'Tomatoes', quantity: 4, unit: 'pieces' },
-  { name: 'Basil', quantity: 1, unit: 'bunch' },
-  { name: 'Olive oil', quantity: 200, unit: 'ml' },
-  { name: 'Garlic', quantity: 3, unit: 'cloves' },
-  { name: 'Onion', quantity: 1, unit: 'piece' },
-  { name: 'Pasta', quantity: 500, unit: 'g' },
-  { name: 'Salt', quantity: 1, unit: 'pinch' },
-  { name: 'Black pepper', quantity: 1, unit: 'pinch' },
-]
 
 /**
  * POST /api/recipes/generate
  *
  * Generates a new recipe using AI based on user hint and optionally pantry items.
  * Returns 202 Accepted with the generated recipe and any warnings.
- *
- * Headers:
- * - Authorization: Bearer <token>
- *
- * @note This is a development version without database integration.
- * TODO: Add database queries for pantry items when database is ready.
  *
  * @see src/lib/api-auth.ts - authentication helper
  */
@@ -47,10 +28,8 @@ export async function POST(
 ): Promise<NextResponse<GenerateRecipeResponse | { error: string }>> {
   try {
     // 1. Authentication
-    const { errorResponse } = await authenticateRequest(request)
+    const { user, supabase, errorResponse } = await authenticateRequest(request)
     if (errorResponse) return errorResponse as NextResponse<{ error: string }>
-    // Note: user is available from authenticateRequest but not used yet
-    // TODO: Use user.id when saving to database
 
     // 2. Validate request body
     const body = await request.json()
@@ -68,21 +47,38 @@ export async function POST(
 
     const { hint, usePantryItems } = validationResult.data
 
-    // 2. Get pantry items if requested (using mock data for now)
+    // 3. Resolve user's household
+    const typedSupabase = supabase as unknown as SupabaseClient<Database>
+
+    const { data: membership, error: membershipError } = await typedSupabase
+      .from('user_households')
+      .select('household_id')
+      .eq('user_id', user!.id)
+      .maybeSingle()
+
+    if (membershipError || !membership) {
+      return NextResponse.json({ error: 'User does not belong to any household' }, { status: 404 })
+    }
+
+    const householdId = membership.household_id
+
+    // 4. Get pantry items if requested
     let pantryItems: Array<{ name: string; quantity: number; unit: string | null }> = []
 
     if (usePantryItems) {
-      pantryItems = MOCK_PANTRY_ITEMS
+      const pantryService = new PantryService(typedSupabase)
+      const pantry = await pantryService.getPantryByHousehold(householdId, user!.id)
+      pantryItems = pantry.items.map(({ name, quantity, unit }) => ({ name, quantity, unit }))
     }
 
-    // 3. Build prompts
+    // 4. Build prompts
     const systemPrompt = RECIPE_GENERATION_SYSTEM_PROMPT
     const userPrompt = buildRecipeGenerationPrompt(
       hint,
       pantryItems.length > 0 ? pantryItems : undefined
     )
 
-    // 4. Call OpenRouter API
+    // 5. Call OpenRouter API
     let completion
     try {
       completion = await openRouter.generateChatCompletion(
@@ -118,7 +114,7 @@ export async function POST(
       throw error
     }
 
-    // 5. Extract and validate recipe from response
+    // 6. Extract and validate recipe from response
     const messageContent = completion.choices[0]?.message?.content
 
     if (!messageContent) {
@@ -154,7 +150,7 @@ export async function POST(
 
     const validatedRecipe = recipeValidation.data
 
-    // 6. Map to Recipe interface
+    // 7. Map to Recipe interface
     const recipe: Recipe = {
       id: crypto.randomUUID(),
       title: validatedRecipe.title,
@@ -165,13 +161,13 @@ export async function POST(
       cookTime: validatedRecipe.cookTime,
       creationMethod: 'ai_generated',
       createdAt: new Date().toISOString(),
-      householdId: 'mock-household-id', // TODO: Replace with actual householdId when database is ready
+      householdId,
     }
 
-    // 7. Build warnings (none for mock data)
+    // 8. Build warnings
     const warnings: string[] | undefined = undefined
 
-    // 8. Return response
+    // 9. Return response
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     }
@@ -189,7 +185,10 @@ export async function POST(
   } catch (error) {
     console.error('Error in recipe generation:', error)
 
-    // Handle unexpected errors
+    if (error instanceof PantryNotFoundError) {
+      return NextResponse.json({ error: 'Household or pantry not found' }, { status: 404 })
+    }
+
     if (error instanceof OpenRouterError) {
       return NextResponse.json({ error: 'AI service error occurred' }, { status: 503 })
     }
