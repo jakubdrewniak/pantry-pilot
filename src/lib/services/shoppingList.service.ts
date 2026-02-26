@@ -68,6 +68,16 @@ export class TransferToPantryError extends Error {
   }
 }
 
+export class RecipeNotFoundError extends Error {
+  constructor(
+    public notFoundIds: string[],
+    message = 'One or more recipes not found or access denied'
+  ) {
+    super(message)
+    this.name = 'RecipeNotFoundError'
+  }
+}
+
 /**
  * ShoppingListService
  *
@@ -788,6 +798,215 @@ export class ShoppingListService {
         failed: failed.length,
       },
     }
+  }
+
+  /**
+   * Generate shopping list items from selected recipes
+   *
+   * @param userId - The authenticated user's UUID (for authorization)
+   * @param recipeIds - Array of recipe UUIDs to generate from (max 20)
+   * @returns Array of created/updated ShoppingListItem DTOs
+   * @throws RecipeNotFoundError if any recipe doesn't exist or belong to user's household
+   * @throws ShoppingListNotFoundError if user not authorized to access household
+   *
+   * Business logic:
+   * - Fetches ingredients from all selected recipes
+   * - Merges duplicate ingredient names (case-insensitive, sums quantities)
+   * - Gets or creates shopping list for user's household
+   * - For ingredients already on the list: updates quantity (adds to existing)
+   * - For new ingredients: inserts as batch (atomic)
+   * - Real-time INSERT events emitted automatically by Supabase for new items
+   */
+  async generateFromRecipes(userId: string, recipeIds: string[]): Promise<ShoppingListItem[]> {
+    // 1. Get user's household ID
+    const { data: membership, error: membershipError } = await this.supabase
+      .from('user_households')
+      .select('household_id')
+      .eq('user_id', userId)
+      .maybeSingle()
+
+    if (membershipError || !membership) {
+      throw new ShoppingListNotFoundError('User does not belong to any household')
+    }
+
+    const householdId = membership.household_id
+
+    // 2. Fetch all recipes ensuring they belong to user's household
+    const { data: recipes, error: recipesError } = await this.supabase
+      .from('recipes')
+      .select('id, content')
+      .eq('household_id', householdId)
+      .in('id', recipeIds)
+
+    if (recipesError) {
+      console.error('[ShoppingListService] Error fetching recipes:', recipesError)
+      throw new Error('Failed to fetch recipes')
+    }
+
+    // Verify all requested recipes were found
+    const foundIds = new Set((recipes || []).map(r => r.id))
+    const notFoundIds = recipeIds.filter(id => !foundIds.has(id))
+
+    if (notFoundIds.length > 0) {
+      throw new RecipeNotFoundError(notFoundIds)
+    }
+
+    // 3. Extract and merge ingredients (in-memory, case-insensitive by name)
+    const mergedIngredients = new Map<
+      string,
+      { name: string; quantity: number; unit: string | null }
+    >()
+
+    for (const recipe of recipes || []) {
+      const content = recipe.content as {
+        ingredients?: Array<{ name: string; quantity: number; unit?: string }>
+      }
+      const ingredients = content.ingredients || []
+
+      for (const ingredient of ingredients) {
+        const key = ingredient.name.toLowerCase()
+        const existing = mergedIngredients.get(key)
+
+        if (existing) {
+          existing.quantity += ingredient.quantity
+        } else {
+          mergedIngredients.set(key, {
+            name: ingredient.name,
+            quantity: ingredient.quantity,
+            unit: ingredient.unit ?? null,
+          })
+        }
+      }
+    }
+
+    if (mergedIngredients.size === 0) {
+      return [] // Recipes have no ingredients
+    }
+
+    // 4. Get or create shopping list for household
+    const { data: existingList, error: listError } = await this.supabase
+      .from('shopping_lists')
+      .select('id')
+      .eq('household_id', householdId)
+      .maybeSingle()
+
+    if (listError) {
+      console.error('[ShoppingListService] Error fetching shopping list:', listError)
+      throw new Error('Failed to fetch shopping list')
+    }
+
+    let listId: string
+
+    if (existingList) {
+      listId = existingList.id
+    } else {
+      const { data: newList, error: createError } = await this.supabase
+        .from('shopping_lists')
+        .insert({ household_id: householdId })
+        .select('id')
+        .single()
+
+      if (createError || !newList) {
+        console.error('[ShoppingListService] Error creating shopping list:', createError)
+        throw new Error('Failed to create shopping list')
+      }
+
+      listId = newList.id
+    }
+
+    // 5. Fetch existing items to determine what to insert vs update
+    const { data: existingItems, error: existingError } = await this.supabase
+      .from('shopping_list_items')
+      .select('id, name, quantity')
+      .eq('shopping_list_id', listId)
+
+    if (existingError) {
+      console.error('[ShoppingListService] Error fetching existing items:', existingError)
+      throw new Error('Failed to fetch existing shopping list items')
+    }
+
+    const existingByName = new Map(
+      (existingItems || []).map(item => [item.name.toLowerCase(), item])
+    )
+
+    // 6. Split merged ingredients into: new items vs items to update
+    const toInsert: Array<{
+      shopping_list_id: string
+      name: string
+      quantity: number
+      unit: string | null
+    }> = []
+    const toUpdate: Array<{ id: string; newQuantity: number }> = []
+
+    for (const ingredient of mergedIngredients.values()) {
+      const existing = existingByName.get(ingredient.name.toLowerCase())
+
+      if (existing) {
+        toUpdate.push({
+          id: existing.id,
+          newQuantity: Number(existing.quantity) + ingredient.quantity,
+        })
+      } else {
+        toInsert.push({
+          shopping_list_id: listId,
+          name: ingredient.name,
+          quantity: ingredient.quantity,
+          unit: ingredient.unit,
+        })
+      }
+    }
+
+    const resultItems: ShoppingListItem[] = []
+
+    // 7. Update existing items (sequential, small count expected)
+    for (const update of toUpdate) {
+      const { data: updatedItem, error: updateError } = await this.supabase
+        .from('shopping_list_items')
+        .update({ quantity: update.newQuantity })
+        .eq('id', update.id)
+        .select('id, name, quantity, shopping_list_id, unit, is_purchased')
+        .single()
+
+      if (updateError || !updatedItem) {
+        console.error('[ShoppingListService] Error updating item during generate:', updateError)
+        throw new Error('Failed to update existing shopping list item')
+      }
+
+      resultItems.push({
+        id: updatedItem.id,
+        name: updatedItem.name,
+        quantity: Number(updatedItem.quantity),
+        shoppingListId: updatedItem.shopping_list_id,
+        unit: updatedItem.unit,
+        isPurchased: updatedItem.is_purchased,
+      })
+    }
+
+    // 8. Batch insert new items (atomic — single INSERT statement)
+    if (toInsert.length > 0) {
+      const { data: insertedItems, error: insertError } = await this.supabase
+        .from('shopping_list_items')
+        .insert(toInsert)
+        .select('id, name, quantity, shopping_list_id, unit, is_purchased')
+
+      if (insertError || !insertedItems) {
+        console.error('[ShoppingListService] Error inserting generated items:', insertError)
+        throw new Error('Failed to insert generated shopping list items')
+      }
+
+      for (const item of insertedItems) {
+        resultItems.push({
+          id: item.id,
+          name: item.name,
+          quantity: Number(item.quantity),
+          shoppingListId: item.shopping_list_id,
+          unit: item.unit,
+          isPurchased: item.is_purchased,
+        })
+      }
+    }
+
+    return resultItems
   }
 
   /**

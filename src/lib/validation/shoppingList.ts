@@ -150,6 +150,23 @@ export const bulkDeleteSchema = z.object({
     .max(100, 'Maximum 100 items allowed'),
 })
 
+/**
+ * Generate shopping list from recipes validation schema
+ *
+ * Rules:
+ * - recipeIds: array of UUID strings, min 1, max 20 recipes
+ *
+ * Used for: POST /api/shopping-lists/generate
+ *
+ * Limit of 20 recipes prevents DoS abuse and keeps ingredient merging manageable.
+ */
+export const generateShoppingListSchema = z.object({
+  recipeIds: z
+    .array(z.string().uuid('Invalid recipe ID format'))
+    .min(1, 'At least one recipe required')
+    .max(20, 'Maximum 20 recipes allowed'),
+})
+
 // TypeScript types inferred from schemas
 export type HouseholdIdParam = z.infer<typeof householdIdParamSchema>
 export type ListIdParam = z.infer<typeof listIdParamSchema>
@@ -160,3 +177,4 @@ export type UpdateItemInput = z.infer<typeof updateItemSchema>
 export type BulkPurchaseInput = z.infer<typeof bulkPurchaseSchema>
 export type BulkDeleteInput = z.infer<typeof bulkDeleteSchema>
 export type ShoppingListItemInput = z.infer<typeof ShoppingListItemInputSchema>
+export type GenerateShoppingListInput = z.infer<typeof generateShoppingListSchema>
