@@ -1,0 +1,6 @@
+# Backend & Database Rules
+
+- Use Supabase for backend services, including authentication and database interactions.
+- Follow Supabase guidelines for security and performance.
+- Use Zod schemas to validate data exchanged with the backend.
+- Use `SupabaseClient` type from `src/db/supabase.client.ts`, not from `@supabase/supabase-js`
