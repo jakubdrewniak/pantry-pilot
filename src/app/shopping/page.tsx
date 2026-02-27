@@ -14,6 +14,7 @@ import {
   EditItemDialog,
   BulkPurchaseConfirmDialog,
   BulkDeleteConfirmDialog,
+  GenerateFromRecipesDialog,
 } from '@/components/shopping-list'
 import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -73,6 +74,7 @@ export default function ShoppingListPage(): JSX.Element {
   const [editingItem, setEditingItem] = useState<ShoppingListItem | null>(null)
   const [isBulkPurchaseDialogOpen, setIsBulkPurchaseDialogOpen] = useState(false)
   const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false)
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false)
 
   // Get selected items for dialogs
   const selectedItems = filteredItems.filter(item => selectedItemIds.includes(item.id))
@@ -216,8 +218,12 @@ export default function ShoppingListPage(): JSX.Element {
   }
 
   const handleGenerateFromRecipes = () => {
-    // TODO: Implement generate from recipes dialog
-    console.log('[Generate] Open generate from recipes dialog')
+    setIsGenerateDialogOpen(true)
+  }
+
+  const handleGenerateSuccess = () => {
+    console.log('[Generate] Shopping list generated from recipes')
+    refetch()
   }
 
   // Handle error display
@@ -329,6 +335,13 @@ export default function ShoppingListPage(): JSX.Element {
           selectedItems={selectedItems}
           listId={shoppingList?.id || ''}
           onSuccess={handleBulkDeleteSuccess}
+        />
+
+        {/* Generate from Recipes Dialog */}
+        <GenerateFromRecipesDialog
+          open={isGenerateDialogOpen}
+          onOpenChange={setIsGenerateDialogOpen}
+          onSuccess={handleGenerateSuccess}
         />
       </div>
     </div>

@@ -7,6 +7,7 @@
 export { EditItemDialog } from './EditItemDialog'
 export { BulkPurchaseConfirmDialog } from './BulkPurchaseConfirmDialog'
 export { BulkDeleteConfirmDialog } from './BulkDeleteConfirmDialog'
+export { GenerateFromRecipesDialog } from './GenerateFromRecipesDialog'
 export { ItemsFilterBar } from './ItemsFilterBar'
 export { ShoppingListItem } from './ShoppingListItem'
 export { ShoppingListItems } from './ShoppingListItems'
