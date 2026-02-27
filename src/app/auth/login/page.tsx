@@ -21,8 +21,6 @@ export const metadata: Metadata = {
  *
  * Route: /auth/login
  *
- * TODO: Add redirect after successful login (to /dashboard or /recipes)
- * TODO: Add "Remember me" option if needed
  */
 export default function LoginPage(): JSX.Element {
   return (
