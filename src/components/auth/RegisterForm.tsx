@@ -45,13 +45,12 @@ export const RegisterForm = (): JSX.Element => {
           <AlertDescription className="text-green-800 dark:text-green-200">
             <strong>Account created successfully!</strong>
             <br />
-            You can now sign in with your email and password.
+            You&apos;re all set — your account is ready to use.
           </AlertDescription>
         </Alert>
 
-        {/* Sign In Link */}
-        <Link href="/auth/login" className={buttonVariants({ className: 'w-full' })}>
-          Go to Sign In
+        <Link href="/" className={buttonVariants({ className: 'w-full' })}>
+          Start Using the App
         </Link>
       </div>
     )

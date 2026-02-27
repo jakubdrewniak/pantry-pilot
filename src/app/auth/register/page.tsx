@@ -22,8 +22,6 @@ export const metadata: Metadata = {
  *
  * Route: /auth/register
  *
- * TODO: Add redirect after successful registration (to /auth/login with success message)
- * TODO: Add social registration options if needed
  */
 export default function RegisterPage(): JSX.Element {
   return (
