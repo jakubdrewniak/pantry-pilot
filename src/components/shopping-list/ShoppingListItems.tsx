@@ -3,6 +3,7 @@
 import { ShoppingListItem } from './ShoppingListItem'
 import { EmptyState } from '@/components/EmptyState'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import type { ShoppingListItem as ShoppingListItemType } from '@/types/types'
 import { ShoppingCart } from 'lucide-react'
 
@@ -10,6 +11,8 @@ interface ShoppingListItemsProps {
   items: ShoppingListItemType[]
   selectedItemIds: string[]
   onToggleSelect: (itemId: string) => void
+  onSelectAll: () => void
+  onClearSelection: () => void
   onEditItem: (itemId: string) => void
   onDeleteItem: (itemId: string) => void
   onPurchaseItem: (itemId: string) => void
@@ -41,12 +44,29 @@ export function ShoppingListItems({
   items,
   selectedItemIds,
   onToggleSelect,
+  onSelectAll,
+  onClearSelection,
   onEditItem,
   onDeleteItem,
   onPurchaseItem,
   isLoading,
   variant = 'table',
 }: ShoppingListItemsProps): JSX.Element {
+  const allSelected = items.length > 0 && items.every(item => selectedItemIds.includes(item.id))
+  const someSelected = !allSelected && items.some(item => selectedItemIds.includes(item.id))
+  const headerCheckboxState: boolean | 'indeterminate' = allSelected
+    ? true
+    : someSelected
+      ? 'indeterminate'
+      : false
+
+  const handleToggleSelectAll = () => {
+    if (allSelected || someSelected) {
+      onClearSelection()
+    } else {
+      onSelectAll()
+    }
+  }
   // Loading skeleton
   if (isLoading) {
     return (
@@ -96,7 +116,11 @@ export function ShoppingListItems({
         <thead className="bg-muted/50">
           <tr className="border-b">
             <th className="p-4 text-left w-12">
-              <span className="sr-only">Select</span>
+              <Checkbox
+                checked={headerCheckboxState}
+                onCheckedChange={handleToggleSelectAll}
+                aria-label="Select all items"
+              />
             </th>
             <th className="p-4 text-left font-semibold">Name</th>
             <th className="p-4 text-left font-semibold w-24">Quantity</th>

@@ -61,6 +61,7 @@ export default function ShoppingListPage(): JSX.Element {
     setFilterStatus,
     setSortBy,
     toggleSelectItem,
+    selectAll,
     clearSelection,
     refetch,
     setShoppingList,
@@ -301,6 +302,8 @@ export default function ShoppingListPage(): JSX.Element {
           items={filteredItems}
           selectedItemIds={selectedItemIds}
           onToggleSelect={toggleSelectItem}
+          onSelectAll={selectAll}
+          onClearSelection={clearSelection}
           onEditItem={handleEditItem}
           onDeleteItem={handleDeleteItem}
           onPurchaseItem={handlePurchaseItem}

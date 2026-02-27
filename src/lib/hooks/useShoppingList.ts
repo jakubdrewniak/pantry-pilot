@@ -25,6 +25,7 @@ export interface UseShoppingListReturn {
   setFilterStatus: (status: FilterStatus) => void
   setSortBy: (sort: SortBy) => void
   toggleSelectItem: (itemId: string) => void
+  selectAll: () => void
   clearSelection: () => void
   refetch: () => Promise<void>
   setShoppingList: (list: ShoppingListWithItems | null) => void
@@ -153,6 +154,13 @@ export function useShoppingList(householdId: string | null | undefined): UseShop
   }, [])
 
   /**
+   * Select all currently filtered items
+   */
+  const selectAll = useCallback(() => {
+    setSelectedItemIds(filteredItems.map(item => item.id))
+  }, [filteredItems])
+
+  /**
    * Clear all selections
    */
   const clearSelection = useCallback(() => {
@@ -175,6 +183,7 @@ export function useShoppingList(householdId: string | null | undefined): UseShop
     setFilterStatus,
     setSortBy,
     toggleSelectItem,
+    selectAll,
     clearSelection,
     refetch,
     setShoppingList,
