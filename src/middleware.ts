@@ -66,15 +66,10 @@ export async function middleware(request: NextRequest) {
     isApiRoute,
   })
 
-  // Home page (/) redirects based on authentication state
-  if (isHomePage) {
+  // Home page (/) — unauthenticated users go to login, authenticated users see the home page
+  if (isHomePage && !user) {
     const url = request.nextUrl.clone()
-    if (user) {
-      // TODO: Redirect to /pantry when pantry page is implemented
-      url.pathname = '/recipes'
-    } else {
-      url.pathname = '/auth/login'
-    }
+    url.pathname = '/auth/login'
     return NextResponse.redirect(url)
   }
 
