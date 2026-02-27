@@ -87,7 +87,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirect to recipes if user is authenticated and trying to access auth pages
+  // Redirect to home if user is authenticated and trying to access auth pages
   // Exceptions:
   // - /auth/callback handles its own redirects
   // - /auth/reset-password allows recovery sessions (user has session but needs to set password)
@@ -98,10 +98,9 @@ export async function middleware(request: NextRequest) {
     !request.nextUrl.pathname.startsWith('/auth/callback') &&
     !isResetPasswordPage
   ) {
-    console.log('🔀 Middleware: Redirecting authenticated user from auth page to /recipes')
+    console.log('🔀 Middleware: Redirecting authenticated user from auth page to /')
     const url = request.nextUrl.clone()
-    // TODO: Redirect to /pantry when pantry page is implemented
-    url.pathname = '/recipes'
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 

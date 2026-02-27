@@ -53,7 +53,6 @@ export async function login(
   }
 
   // 4. Success: revalidate and redirect
-  // TODO: Redirect to /pantry when pantry page is implemented
   revalidatePath('/', 'layout')
   redirect('/')
 }
