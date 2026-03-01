@@ -186,8 +186,7 @@ export default function RecipesListPage(): JSX.Element {
   }
 
   const handleRecipeSelect = (recipeId: string): void => {
-    // TODO: Navigate to recipe details
-    console.log('Select recipe:', recipeId)
+    router.push(`/recipes/${recipeId}`)
   }
 
   /**
