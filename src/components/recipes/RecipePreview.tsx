@@ -29,12 +29,6 @@ export const RecipePreview = ({ recipe }: RecipePreviewProps): JSX.Element | nul
     return null
   }
 
-  // Truncate instructions for preview (first 200 chars)
-  const instructionsPreview =
-    recipe.instructions.length > 200
-      ? `${recipe.instructions.slice(0, 200)}...`
-      : recipe.instructions
-
   return (
     <Card role="article" aria-label="Generated recipe preview" data-testid="ai-recipe-preview">
       <CardHeader>
@@ -84,7 +78,7 @@ export const RecipePreview = ({ recipe }: RecipePreviewProps): JSX.Element | nul
           <h3 id="instructions-heading" className="font-medium mb-2">
             Instructions
           </h3>
-          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{instructionsPreview}</p>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap">{recipe.instructions}</p>
         </section>
       </CardContent>
     </Card>
