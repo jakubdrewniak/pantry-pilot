@@ -57,11 +57,14 @@ export const IngredientItem = ({
   }
 
   return (
-    <div className="space-y-2" data-testid={`ingredient-item-${ingredient.id}`}>
+    <div
+      className="space-y-2 rounded-md border border-border p-3 sm:border-0 sm:p-0 sm:rounded-none"
+      data-testid={`ingredient-item-${ingredient.id}`}
+    >
       {/* Grid layout for ingredient fields */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[2fr_1fr_1fr_auto]">
-        {/* Name input */}
-        <div className="flex flex-col">
+      <div className="grid gap-2 grid-cols-[1fr_1fr_auto] sm:grid-cols-[2fr_1fr_1fr_auto]">
+        {/* Name input - spans full width on mobile */}
+        <div className="col-span-3 sm:col-span-1 flex flex-col">
           <Input
             type="text"
             name={`ingredient-name-${ingredient.id}`}
@@ -110,7 +113,7 @@ export const IngredientItem = ({
         </div>
 
         {/* Remove button */}
-        <div className="flex items-start">
+        <div className="flex items-center">
           <Button
             type="button"
             variant="ghost"
